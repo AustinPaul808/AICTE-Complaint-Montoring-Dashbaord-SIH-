@@ -179,6 +179,15 @@ BEGIN
             '{"full_name": "Dr. Meenakshi Sundaram", "role": "Cross-Department Reviewer", "department_code": "AB", "designation": "Senior Consultant (Coordination)"}'::jsonb,
             now(), now()
         ) ON CONFLICT (id) DO NOTHING;
+
+        -- Link auth.identities so Supabase GoTrue authentication does not fail with schema error
+        INSERT INTO auth.identities (
+            id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
+        )
+        SELECT u.id, u.id, jsonb_build_object('sub', u.id::text, 'email', u.email), 'email', u.email, now(), now(), now()
+        FROM auth.users u
+        WHERE u.id IN (admin_id, rb_officer_id, pgrc_officer_id, reviewer_id)
+        ON CONFLICT (provider, provider_id) DO NOTHING;
     END IF;
 
     -- Upsert Public Profiles
