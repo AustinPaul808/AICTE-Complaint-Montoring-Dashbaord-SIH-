@@ -1,0 +1,237 @@
+import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { Shield, Lock, Mail, AlertCircle, CheckCircle2, ArrowRight, KeyRound, Building2 } from 'lucide-react';
+
+export const Login: React.FC = () => {
+  const { signIn, isConfigured } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setErrorMessage('Please enter both your official email and password.');
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      await signIn(email.trim(), password);
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      console.error('Sign-in error:', err);
+      setErrorMessage(
+        error?.message?.includes('Invalid login credentials')
+          ? 'Invalid official email or password. Please verify your credentials.'
+          : error?.message || 'Authentication failed. Please verify Supabase connection.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleQuickFill = (demoEmail: string) => {
+    setEmail(demoEmail);
+    setPassword('Aicte@Admin2026');
+    setErrorMessage(null);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-100 flex flex-col justify-between font-sans">
+      {/* Top Government Tricolor Stripe */}
+      <div className="gov-tricolor-stripe w-full"></div>
+
+      {/* Official Government Header Banner */}
+      <div className="bg-[#0b3b60] text-white border-b-4 border-[#e67e22] shadow-sm py-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between">
+          <div className="flex items-center space-x-3.5">
+            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center p-1 shadow-sm">
+              <Shield className="w-8 h-8 text-[#0b3b60]" />
+            </div>
+            <div>
+              <div className="text-[11px] sm:text-xs tracking-wider uppercase text-amber-200 font-medium">
+                अखिल भारतीय तकनीकी शिक्षा परिषद | All India Council for Technical Education
+              </div>
+              <h1 className="text-base sm:text-xl font-bold tracking-tight">
+                Cross-Bureau Complaint Coordination Platform
+              </h1>
+              <div className="text-[11px] sm:text-xs text-slate-300">
+                Ministry of Education, Government of India • SIH Problem Statement ID: 26264
+              </div>
+            </div>
+          </div>
+          <div className="hidden md:block text-right text-xs text-slate-200">
+            <div className="font-semibold text-white">Central Complaint Portal</div>
+            <div>National Informatics Centre (NIC) Security Standard</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex items-center justify-center px-4 py-10">
+        <div className="max-w-md w-full bg-white rounded-md border border-slate-300 shadow-md p-6 sm:p-8">
+          
+          {/* Form Header */}
+          <div className="border-b border-slate-200 pb-4 mb-5 text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-100 text-[#0b3b60] mb-2 border border-slate-200">
+              <Lock className="w-6 h-6" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-900">Official Officer Login</h2>
+            <p className="text-xs text-slate-600 mt-1">
+              Authorized access for AICTE Bureau Officers, Reviewers, and Administrators
+            </p>
+          </div>
+
+          {/* Missing Supabase Configuration Warning */}
+          {!isConfigured && (
+            <div className="mb-5 p-3.5 bg-amber-50 border border-amber-300 rounded text-xs text-amber-900 flex items-start space-x-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold">Supabase Keys Required:</span>
+                <p className="mt-0.5 text-amber-800">
+                  Please paste your <code className="bg-amber-100 px-1 py-0.5 rounded">VITE_SUPABASE_PUBLISHABLE_KEY</code> into the <code className="bg-amber-100 px-1 py-0.5 rounded">.env</code> file to enable live sign-in.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Error Message Alert */}
+          {errorMessage && (
+            <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded text-xs text-red-800 flex items-start space-x-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                Official Email Address <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="officer@aicte.gov.in"
+                  required
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-[#0b3b60] focus:border-transparent bg-white text-slate-900"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                Password <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <KeyRound className="w-4 h-4" />
+                </div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  required
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-[#0b3b60] focus:border-transparent bg-white text-slate-900"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full mt-2 py-2.5 px-4 bg-[#0b3b60] hover:bg-[#072a45] text-white text-sm font-semibold rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0b3b60] disabled:opacity-50 transition-colors flex items-center justify-center space-x-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Verifying Credentials...</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign In to Portal</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Seed Demo Account Quick-Fill Switcher */}
+          <div className="mt-6 pt-5 border-t border-slate-200">
+            <div className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2 flex items-center justify-between">
+              <span>Seeded Test Profiles:</span>
+              <span className="text-[10px] font-normal text-slate-500">1-Click Fill</span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => handleQuickFill('admin@aicte.gov.in')}
+                className="p-2 text-left border border-slate-200 hover:border-[#0b3b60] hover:bg-slate-50 rounded transition-all group"
+              >
+                <div className="font-semibold text-slate-800 group-hover:text-[#0b3b60]">Administrator</div>
+                <div className="text-[10px] text-slate-500 truncate">admin@aicte.gov.in</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickFill('rb.officer@aicte.gov.in')}
+                className="p-2 text-left border border-slate-200 hover:border-[#0b3b60] hover:bg-slate-50 rounded transition-all group"
+              >
+                <div className="font-semibold text-slate-800 group-hover:text-[#0b3b60]">RB Officer</div>
+                <div className="text-[10px] text-slate-500 truncate">Regulation Bureau</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickFill('pgrc.officer@aicte.gov.in')}
+                className="p-2 text-left border border-slate-200 hover:border-[#0b3b60] hover:bg-slate-50 rounded transition-all group"
+              >
+                <div className="font-semibold text-slate-800 group-hover:text-[#0b3b60]">PGRC Officer</div>
+                <div className="text-[10px] text-slate-500 truncate">Grievance Cell</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickFill('reviewer@aicte.gov.in')}
+                className="p-2 text-left border border-slate-200 hover:border-[#0b3b60] hover:bg-slate-50 rounded transition-all group"
+              >
+                <div className="font-semibold text-slate-800 group-hover:text-[#0b3b60]">Reviewer</div>
+                <div className="text-[10px] text-slate-500 truncate">Cross-Bureau</div>
+              </button>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded border border-slate-200">
+              <span className="flex items-center">
+                <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                Default password for all:
+              </span>
+              <code className="font-mono text-slate-700 font-medium">Aicte@Admin2026</code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Official Government Footer */}
+      <footer className="bg-slate-900 text-slate-400 text-xs py-4 border-t border-slate-800">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 text-center sm:text-left">
+          <div className="flex items-center space-x-2">
+            <Building2 className="w-4 h-4 text-slate-400" />
+            <span>AICTE Cross-Bureau Complaint Coordination Platform (SIH-26264)</span>
+          </div>
+          <div>Strictly for Official Use • All Actions Audited</div>
+        </div>
+      </footer>
+    </div>
+  );
+};
