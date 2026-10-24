@@ -1,5 +1,6 @@
 # AICTE Cross-Bureau Complaint Coordination Platform
 
+[![Live Demo](https://img.shields.io/badge/Live%20Portal-Vercel%20Deployment-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://aicte-complaint-montoring-dashbaord.vercel.app/)
 [![SIH Problem Statement ID](https://img.shields.io/badge/SIH%202024-Problem%20ID%3A%2026264-FF9933?style=for-the-badge&logo=gov.in)](https://www.sih.gov.in/)
 [![React](https://img.shields.io/badge/React%2019-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript%205-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -7,6 +8,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Supabase PostgreSQL](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 
+> 🌐 **Live Website:** [https://aicte-complaint-montoring-dashbaord.vercel.app/](https://aicte-complaint-montoring-dashbaord.vercel.app/)  
 > **All India Council for Technical Education (AICTE)**  
 > Ministry of Education, Government of India  
 > Inter-Bureau Regulatory & Public Grievance Redressal Monitoring System
