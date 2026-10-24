@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Shield, Lock, Mail, AlertCircle, CheckCircle2, ArrowRight, KeyRound, Building2, Zap } from 'lucide-react';
 
-export const Login: React.FC = () => {
+interface LoginProps {
+  onGoToPublicPortal?: () => void;
+}
+
+export const Login: React.FC<LoginProps> = ({ onGoToPublicPortal }) => {
   const { signIn, instantDemoLogin, isConfigured } = useAuth();
   const [email, setEmail] = useState('admin@aicte.gov.in');
   const [password, setPassword] = useState('Aicte@Admin2026');
@@ -96,7 +100,29 @@ export const Login: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex items-center justify-center px-4 py-8">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
+        {/* Student / Institution Grievance Direct Entry Banner */}
+        {onGoToPublicPortal && (
+          <div className="max-w-md w-full mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-md p-4 shadow-sm flex items-center justify-between">
+            <div>
+              <div className="text-xs font-bold text-[#0b3b60] uppercase tracking-wide">
+                Student &amp; Institution Portal
+              </div>
+              <div className="text-xs text-slate-600 mt-0.5">
+                Register a grievance without officer credentials
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onGoToPublicPortal}
+              className="px-3.5 py-1.5 bg-[#0b3b60] hover:bg-[#072a45] text-white text-xs font-semibold rounded shadow-xs flex items-center space-x-1 shrink-0"
+            >
+              <span>Public Intake</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         <div className="max-w-md w-full bg-white rounded-md border border-slate-300 shadow-md p-6 sm:p-8">
           
           {/* Form Header */}

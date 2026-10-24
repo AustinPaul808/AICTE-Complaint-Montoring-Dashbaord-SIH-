@@ -19,7 +19,12 @@ export type NewComplaintInput = {
   assigned_officer_id?: string | null;
   due_at?: string | null;
   received_at?: string;
-  created_by: string;
+  created_by?: string | null;
+  complainant_name?: string | null;
+  complainant_email?: string | null;
+  complainant_phone?: string | null;
+  complainant_type?: string | null;
+  student_roll_no?: string | null;
 };
 
 export interface ComplaintFilterOptions {
@@ -122,22 +127,60 @@ export async function getComplaintById(id: string): Promise<ComplaintWithRelatio
   return data as unknown as ComplaintWithRelations;
 }
 
+export async function getComplaintByNumberOrId(identifier: string): Promise<ComplaintWithRelations | null> {
+  // Normalize input: strip surrounding spaces and spaces around hyphens (e.g. "AICTE - 2026 - 01001" -> "AICTE-2026-01001")
+  const clean = identifier.trim().replace(/\s*-\s*/g, '-');
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean);
+
+  let query = supabase
+    .from('complaints')
+    .select(`
+      *,
+      institution:institutions(*),
+      department:departments(*),
+      assigned_officer:profiles!complaints_assigned_officer_id_fkey(*),
+      creator:profiles!complaints_created_by_fkey(*)
+    `);
+
+  if (isUuid) {
+    query = query.or(`id.eq.${clean},complaint_number.ilike.${clean}`);
+  } else {
+    query = query.ilike('complaint_number', clean);
+  }
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    console.error(`Error looking up complaint "${clean}":`, error.message);
+    return null;
+  }
+
+  return data as unknown as ComplaintWithRelations;
+}
+
 export async function createComplaint(payload: NewComplaintInput): Promise<Database['public']['Tables']['complaints']['Row']> {
+  const insertData: Database['public']['Tables']['complaints']['Insert'] = {
+    institution_id: payload.institution_id,
+    title: payload.title,
+    description: payload.description,
+    category: payload.category,
+    priority: payload.priority,
+    status: 'Received',
+    assigned_department_id: payload.assigned_department_id,
+    assigned_officer_id: payload.assigned_officer_id || null,
+    due_at: payload.due_at || null,
+    received_at: payload.received_at || new Date().toISOString(),
+    created_by: payload.created_by || null,
+    complainant_name: payload.complainant_name || null,
+    complainant_email: payload.complainant_email || null,
+    complainant_phone: payload.complainant_phone || null,
+    complainant_type: payload.complainant_type || null,
+    student_roll_no: payload.student_roll_no || null,
+  };
+
   const { data, error } = await supabase
     .from('complaints')
-    .insert({
-      institution_id: payload.institution_id,
-      title: payload.title,
-      description: payload.description,
-      category: payload.category,
-      priority: payload.priority,
-      status: 'Received',
-      assigned_department_id: payload.assigned_department_id,
-      assigned_officer_id: payload.assigned_officer_id || null,
-      due_at: payload.due_at || null,
-      received_at: payload.received_at || new Date().toISOString(),
-      created_by: payload.created_by,
-    })
+    .insert(insertData)
     .select()
     .single();
 
@@ -146,7 +189,7 @@ export async function createComplaint(payload: NewComplaintInput): Promise<Datab
     throw error;
   }
 
-  return data;
+  return data as Database['public']['Tables']['complaints']['Row'];
 }
 
 export async function updateComplaintStatus(

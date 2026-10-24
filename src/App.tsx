@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Login } from './pages/Login';
+import { PublicGrievancePortal } from './pages/PublicGrievancePortal';
 import { Header } from './components/common/Header';
 import { Sidebar } from './components/common/Sidebar';
 import { Dashboard } from './features/dashboard/Dashboard';
@@ -17,6 +18,7 @@ const AuthenticatedPortal: React.FC = () => {
   const { user, isAdmin, isLoading } = useAuth();
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [selectedComplaintId, setSelectedComplaintId] = useState<string | null>(null);
+  const [publicView, setPublicView] = useState<'portal' | 'login'>('portal');
 
   if (isLoading) {
     return (
@@ -34,7 +36,10 @@ const AuthenticatedPortal: React.FC = () => {
   }
 
   if (!user) {
-    return <Login />;
+    if (publicView === 'portal') {
+      return <PublicGrievancePortal onGoToLogin={() => setPublicView('login')} />;
+    }
+    return <Login onGoToPublicPortal={() => setPublicView('portal')} />;
   }
 
   const renderActiveView = () => {

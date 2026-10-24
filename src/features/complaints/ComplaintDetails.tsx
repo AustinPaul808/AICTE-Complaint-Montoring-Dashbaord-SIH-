@@ -46,6 +46,39 @@ const ALL_STATUSES: ComplaintStatus[] = [
   'Closed',
 ];
 
+const formatActionParticulars = (details: unknown): string => {
+  if (!details) return '—';
+  let data: Record<string, unknown> = {};
+
+  if (typeof details === 'string') {
+    try {
+      data = JSON.parse(details);
+    } catch {
+      return details;
+    }
+  } else if (typeof details === 'object' && details !== null) {
+    data = details as Record<string, unknown>;
+  } else {
+    return String(details);
+  }
+
+  if (data.title && typeof data.title === 'string') return data.title;
+  if (data.preview && typeof data.preview === 'string') return data.preview;
+  if (data.new_status) {
+    return data.old_status
+      ? `Status changed from ${data.old_status} to ${data.new_status}`
+      : `Status set to ${data.new_status}`;
+  }
+  if (data.message && typeof data.message === 'string') return data.message;
+  if (data.note && typeof data.note === 'string') return data.note;
+
+  const parts = Object.entries(data)
+    .filter(([_, val]) => val !== null && val !== undefined && typeof val !== 'object')
+    .map(([key, val]) => `${key.replace(/_/g, ' ')}: ${val}`);
+
+  return parts.length > 0 ? parts.join(' | ') : '—';
+};
+
 export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
   complaintId,
   onBack,
@@ -631,8 +664,11 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
                       <td className="py-2.5 px-3 font-sans text-slate-800">
                         {log.actor?.full_name || 'System Trigger'}
                       </td>
-                      <td className="py-2.5 px-3 text-slate-600 max-w-sm truncate">
-                        {JSON.stringify(log.details)}
+                      <td 
+                        className="py-2.5 px-3 font-sans text-slate-700 max-w-sm truncate"
+                        title={typeof log.details === 'object' ? JSON.stringify(log.details) : undefined}
+                      >
+                        {formatActionParticulars(log.details)}
                       </td>
                       <td className="py-2.5 px-3 text-right text-slate-500 whitespace-nowrap">
                         {new Date(log.created_at).toLocaleString()}

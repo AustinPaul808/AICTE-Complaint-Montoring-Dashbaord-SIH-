@@ -3,6 +3,50 @@ import { supabase } from '../../services/supabase/client';
 import type { AuditLogWithActor } from '../../types/database.types';
 import { Shield, RefreshCw } from 'lucide-react';
 
+// Helper to format JSON metadata into clean, human-readable text
+const formatActionParticulars = (details: unknown): string => {
+  if (!details) return '—';
+  let data: Record<string, unknown> = {};
+
+  if (typeof details === 'string') {
+    try {
+      data = JSON.parse(details);
+    } catch {
+      return details;
+    }
+  } else if (typeof details === 'object' && details !== null) {
+    data = details as Record<string, unknown>;
+  } else {
+    return String(details);
+  }
+
+  // Primary friendly fields
+  if (data.title && typeof data.title === 'string') {
+    return data.title;
+  }
+  if (data.preview && typeof data.preview === 'string') {
+    return data.preview;
+  }
+  if (data.new_status) {
+    return data.old_status
+      ? `Status changed from ${data.old_status} to ${data.new_status}`
+      : `Status set to ${data.new_status}`;
+  }
+  if (data.message && typeof data.message === 'string') {
+    return data.message;
+  }
+  if (data.note && typeof data.note === 'string') {
+    return data.note;
+  }
+
+  // Fallback: format clean key-values without JSON syntax
+  const parts = Object.entries(data)
+    .filter(([_, val]) => val !== null && val !== undefined && typeof val !== 'object')
+    .map(([key, val]) => `${key.replace(/_/g, ' ')}: ${val}`);
+
+  return parts.length > 0 ? parts.join(' | ') : '—';
+};
+
 export const AuditTrail: React.FC = () => {
   const [logs, setLogs] = useState<AuditLogWithActor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,8 +134,11 @@ export const AuditTrail: React.FC = () => {
                     <td className="py-2.5 px-4 font-sans text-slate-900">
                       {log.actor?.full_name || 'System Auto-Trigger'}
                     </td>
-                    <td className="py-2.5 px-4 text-slate-600 max-w-md truncate">
-                      {JSON.stringify(log.details)}
+                    <td 
+                      className="py-2.5 px-4 text-slate-700 font-sans max-w-md truncate"
+                      title={typeof log.details === 'object' ? JSON.stringify(log.details) : undefined}
+                    >
+                      {formatActionParticulars(log.details)}
                     </td>
                     <td className="py-2.5 px-4 text-right text-slate-500 whitespace-nowrap font-sans">
                       {new Date(log.created_at).toLocaleString()}
