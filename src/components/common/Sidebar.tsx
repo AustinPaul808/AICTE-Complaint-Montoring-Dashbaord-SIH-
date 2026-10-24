@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
   FileText,
-  PlusCircle,
+  MessageSquareReply,
   Users,
   BarChart3,
   History,
@@ -34,10 +34,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
       description: 'Search, filter & review cases',
     },
     {
-      id: 'register',
-      label: 'Register Complaint',
-      icon: PlusCircle,
-      description: 'Create new grievance record',
+      id: 'respond',
+      label: 'Respond to Complaint',
+      icon: MessageSquareReply,
+      description: 'Manual response & email dispatch',
     },
     {
       id: 'assignments',

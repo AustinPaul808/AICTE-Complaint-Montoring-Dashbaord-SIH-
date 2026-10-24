@@ -35,6 +35,7 @@ import {
 interface ComplaintDetailsProps {
   complaintId: string;
   onBack: () => void;
+  onRespond?: (id: string) => void;
 }
 
 const ALL_STATUSES: ComplaintStatus[] = [
@@ -82,6 +83,7 @@ const formatActionParticulars = (details: unknown): string => {
 export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
   complaintId,
   onBack,
+  onRespond,
 }) => {
   const { user } = useAuth();
 
@@ -259,6 +261,17 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
         </button>
 
         <div className="flex items-center space-x-2">
+          {onRespond && (
+            <button
+              type="button"
+              onClick={() => onRespond(complaint.id)}
+              className="px-3.5 py-1.5 text-xs font-semibold bg-[#0b3b60] hover:bg-[#072a45] text-white rounded flex items-center space-x-1.5 shadow-sm transition"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Respond &amp; Email Complainant</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setShowReassign(!showReassign)}

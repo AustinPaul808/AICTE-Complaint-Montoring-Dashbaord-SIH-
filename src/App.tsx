@@ -7,6 +7,7 @@ import { Sidebar } from './components/common/Sidebar';
 import { Dashboard } from './features/dashboard/Dashboard';
 import { ComplaintList } from './features/complaints/ComplaintList';
 import { ComplaintRegistration } from './features/complaints/ComplaintRegistration';
+import { RespondComplaint } from './features/complaints/RespondComplaint';
 import { ComplaintDetails } from './features/complaints/ComplaintDetails';
 import { AssignmentManagement } from './features/assignments/AssignmentManagement';
 import { ReportsView } from './features/reports/ReportsView';
@@ -62,7 +63,18 @@ const AuthenticatedPortal: React.FC = () => {
               setSelectedComplaintId(id);
               setCurrentTab('complaint-detail');
             }}
-            onNewComplaint={() => setCurrentTab('register')}
+            onNewComplaint={() => setCurrentTab('respond')}
+          />
+        );
+
+      case 'respond':
+        return (
+          <RespondComplaint
+            initialComplaintId={selectedComplaintId}
+            onViewCaseDossier={(id) => {
+              setSelectedComplaintId(id);
+              setCurrentTab('complaint-detail');
+            }}
           />
         );
 
@@ -82,6 +94,10 @@ const AuthenticatedPortal: React.FC = () => {
           <ComplaintDetails
             complaintId={selectedComplaintId}
             onBack={() => setCurrentTab('complaints')}
+            onRespond={(id) => {
+              setSelectedComplaintId(id);
+              setCurrentTab('respond');
+            }}
           />
         ) : (
           <ComplaintList

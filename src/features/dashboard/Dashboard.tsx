@@ -5,8 +5,43 @@ import {
   Clock,
   Building2,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  MessageSquareReply
 } from 'lucide-react';
+
+// Helper to format JSON metadata into clean, human-readable text
+const formatActionParticulars = (details: unknown): string => {
+  if (!details) return '—';
+  let data: Record<string, unknown> = {};
+
+  if (typeof details === 'string') {
+    try {
+      data = JSON.parse(details);
+    } catch {
+      return details;
+    }
+  } else if (typeof details === 'object' && details !== null) {
+    data = details as Record<string, unknown>;
+  } else {
+    return String(details);
+  }
+
+  if (data.title && typeof data.title === 'string') return data.title;
+  if (data.preview && typeof data.preview === 'string') return data.preview;
+  if (data.new_status) {
+    return data.old_status
+      ? `Status changed from ${data.old_status} to ${data.new_status}`
+      : `Status set to ${data.new_status}`;
+  }
+  if (data.message && typeof data.message === 'string') return data.message;
+  if (data.note && typeof data.note === 'string') return data.note;
+
+  const parts = Object.entries(data)
+    .filter(([_, val]) => val !== null && val !== undefined && typeof val !== 'object')
+    .map(([key, val]) => `${key.replace(/_/g, ' ')}: ${val}`);
+
+  return parts.length > 0 ? parts.join(' | ') : '—';
+};
 
 interface DashboardProps {
   onNavigateTab: (tab: string) => void;
@@ -54,10 +89,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
           <button
-            onClick={() => onNavigateTab('register')}
-            className="px-3 py-1.5 bg-[#0b3b60] hover:bg-[#072a45] text-white text-xs font-semibold rounded shadow-sm transition-colors flex items-center space-x-1"
+            onClick={() => onNavigateTab('respond')}
+            className="px-3.5 py-1.5 bg-[#0b3b60] hover:bg-[#072a45] text-white text-xs font-semibold rounded shadow-sm transition-colors flex items-center space-x-1.5"
           >
-            <span>+ New Intake</span>
+            <MessageSquareReply className="w-3.5 h-3.5" />
+            <span>Respond to Grievance</span>
           </button>
         </div>
       </div>
@@ -226,8 +262,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
                     <div className="text-slate-800 font-medium">
                       {log.actor?.full_name || 'System Operator'}
                     </div>
-                    <div className="text-slate-500 text-[11px] truncate mt-0.5 font-mono">
-                      {JSON.stringify(log.details)}
+                    <div 
+                      className="text-slate-600 text-[11px] truncate mt-0.5 font-sans"
+                      title={typeof log.details === 'object' ? JSON.stringify(log.details) : undefined}
+                    >
+                      {formatActionParticulars(log.details)}
                     </div>
                   </div>
                 ))
