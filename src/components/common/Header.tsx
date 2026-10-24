@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Shield, Bell, LogOut, User as UserIcon, Check, CheckCheck } from 'lucide-react';
+import { Bell, LogOut, User as UserIcon, Check, CheckCheck } from 'lucide-react';
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, type Notification } from '../../services/supabase/notifications';
 
 interface HeaderProps {
@@ -85,9 +85,11 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
           
           {/* Logo & Bureau Title */}
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => onNavigate && onNavigate('dashboard')}>
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1 shadow-sm">
-              <Shield className="w-6 h-6 text-[#0b3b60]" />
-            </div>
+            <img
+              src="/aicte-emblem.png"
+              alt="AICTE Official Emblem"
+              className="w-11 h-11 object-contain drop-shadow-md shrink-0"
+            />
             <div>
               <div className="text-[10px] tracking-wider uppercase text-amber-200 font-semibold leading-tight">
                 AICTE • अखिल भारतीय तकनीकी शिक्षा परिषद
@@ -96,7 +98,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                 Complaint Coordination Platform
               </div>
               <div className="text-[10px] text-slate-300 hidden sm:block">
-                Inter-Bureau Regulatory & Grievance Cell Portal
+                Inter-Bureau Regulatory &amp; Grievance Cell Portal
               </div>
             </div>
           </div>

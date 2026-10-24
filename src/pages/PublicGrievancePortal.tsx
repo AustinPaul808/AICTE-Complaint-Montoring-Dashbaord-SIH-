@@ -4,7 +4,6 @@ import { getDepartments, type Department } from '../services/supabase/department
 import { createComplaint, getComplaintByNumberOrId } from '../services/supabase/complaints';
 import type { ComplaintPriority, ComplaintWithRelations } from '../types/database.types';
 import {
-  Shield,
   CheckCircle2,
   AlertCircle,
   Send,
@@ -274,9 +273,11 @@ export const PublicGrievancePortal: React.FC<PublicGrievancePortalProps> = ({ on
       <header className="bg-[#0b3b60] text-white py-4 shadow-md">
         <div className="max-w-4xl mx-auto px-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-white/10 rounded">
-              <Shield className="w-6 h-6" />
-            </div>
+            <img
+              src="/aicte-emblem.png"
+              alt="AICTE Official Emblem"
+              className="w-10 h-10 object-contain drop-shadow-md shrink-0"
+            />
             <div>
               <h1 className="text-sm font-bold tracking-wide">
                 AICTE PUBLIC GRIEVANCE INTAKE PORTAL

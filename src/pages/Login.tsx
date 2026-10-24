@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Shield, Lock, Mail, AlertCircle, CheckCircle2, ArrowRight, KeyRound, Building2, Zap } from 'lucide-react';
+import { Lock, Mail, AlertCircle, CheckCircle2, ArrowRight, KeyRound, Building2, Zap } from 'lucide-react';
 
 interface LoginProps {
   onGoToPublicPortal?: () => void;
@@ -77,9 +77,11 @@ export const Login: React.FC<LoginProps> = ({ onGoToPublicPortal }) => {
       <div className="bg-[#0b3b60] text-white border-b-4 border-[#e67e22] shadow-sm py-4">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between">
           <div className="flex items-center space-x-3.5">
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center p-1 shadow-sm">
-              <Shield className="w-8 h-8 text-[#0b3b60]" />
-            </div>
+            <img
+              src="/aicte-emblem.png"
+              alt="AICTE Official Emblem"
+              className="w-12 h-12 object-contain drop-shadow-md shrink-0"
+            />
             <div>
               <div className="text-[11px] sm:text-xs tracking-wider uppercase text-amber-200 font-medium">
                 अखिल भारतीय तकनीकी शिक्षा परिषद | All India Council for Technical Education

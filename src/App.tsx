@@ -13,7 +13,7 @@ import { AssignmentManagement } from './features/assignments/AssignmentManagemen
 import { ReportsView } from './features/reports/ReportsView';
 import { AuditTrail } from './features/audit/AuditTrail';
 import { UserManagement } from './features/admin/UserManagement';
-import { Shield, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const AuthenticatedPortal: React.FC = () => {
   const { user, isAdmin, isLoading } = useAuth();
@@ -25,7 +25,7 @@ const AuthenticatedPortal: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center font-sans">
         <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center p-2 shadow-sm border border-slate-200 mb-4">
-          <Shield className="w-10 h-10 text-[#0b3b60] animate-pulse" />
+          <img src="/aicte-emblem.png" alt="AICTE Emblem" className="w-10 h-10 object-contain animate-pulse" />
         </div>
         <div className="flex items-center space-x-2 text-slate-800 font-semibold text-sm">
           <Loader2 className="w-4 h-4 animate-spin text-[#0b3b60]" />
