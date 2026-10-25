@@ -35,6 +35,7 @@ import {
   Sparkles,
   ArrowRight
 } from 'lucide-react';
+import { AIRecommendationPanel } from './AIRecommendationPanel';
 
 interface ComplaintDetailsProps {
   complaintId: string;
@@ -568,6 +569,24 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
           </div>
         </div>
       </div>
+
+      {/* AI Investigation Recommendation Panel */}
+      <AIRecommendationPanel
+        ctx={{
+          complaint_number: complaint.complaint_number,
+          title: complaint.title,
+          description: complaint.description,
+          category: complaint.category,
+          priority: complaint.priority,
+          status: complaint.status,
+          bureau: complaint.department?.code || complaint.department?.name || 'PGRC',
+          institution_name: complaint.institution?.institution_name || 'Unknown Institution',
+          institution_state: complaint.institution?.state || '',
+          complainant_type: (complaint as Record<string, unknown>).complainant_type as string | null | undefined,
+          received_at: complaint.received_at,
+          due_at: complaint.due_at,
+        }}
+      />
 
       {/* Tabs: Investigation Notes | Assignment History | Audit Trail */}
       <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden">

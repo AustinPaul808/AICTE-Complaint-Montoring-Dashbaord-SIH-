@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/AustinPaul808/AICTE-Complaint-Montoring-Dashbaord-SIH-#readme",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.118.0",
     "clsx": "^2.1.1",
     "lucide-react": "^1.61.0",
