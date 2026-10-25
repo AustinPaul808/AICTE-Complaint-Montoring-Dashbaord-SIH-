@@ -53,6 +53,8 @@ const ALL_STATUSES: ComplaintStatus[] = [
   'Closed',
 ];
 
+const ON_HOLD_REASON_PREFIX = '[ON HOLD REASON] ';
+
 const formatActionParticulars = (details: unknown): string => {
   if (!details) return '—';
   let data: Record<string, unknown> = {};
@@ -104,6 +106,7 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
 
   const [isLoading, setIsLoading] = useState(true);
   const [newStatus, setNewStatus] = useState<ComplaintStatus>('Received');
+  const [onHoldReason, setOnHoldReason] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Investigation Note Form
@@ -132,6 +135,10 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
 
       setComplaint(comp);
       setUpdates(notesList);
+      const latestHoldReason = [...notesList]
+        .reverse()
+        .find((note) => note.update_text.startsWith(ON_HOLD_REASON_PREFIX));
+      setOnHoldReason(latestHoldReason?.update_text.slice(ON_HOLD_REASON_PREFIX.length) || '');
       setAssignments(assignList);
       setAuditLogs(auditList);
       setDepartments(deptList);
@@ -178,11 +185,33 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
     e.preventDefault();
     if (!complaint || newStatus === complaint.status) return;
 
+    if (newStatus === 'On Hold' && !onHoldReason.trim()) {
+      setFeedbackMessage({ text: 'Please provide a reason for placing this complaint on hold.', type: 'error' });
+      return;
+    }
+    if (newStatus === 'On Hold' && !user) {
+      setFeedbackMessage({ text: 'Unable to record the hold reason because the signed-in officer could not be identified.', type: 'error' });
+      return;
+    }
+
     setIsUpdatingStatus(true);
     setFeedbackMessage(null);
 
     try {
       await updateComplaintStatus(complaintId, newStatus);
+      if (newStatus === 'On Hold' && user) {
+        try {
+          await addComplaintUpdate(complaintId, user.id, `${ON_HOLD_REASON_PREFIX}${onHoldReason.trim()}`);
+        } catch (err: unknown) {
+          const error = err as { message?: string };
+          await loadComplaintData();
+          setFeedbackMessage({
+            text: `Status changed to On Hold, but the reason could not be saved: ${error?.message || 'Unknown error'}`,
+            type: 'error',
+          });
+          return;
+        }
+      }
       setFeedbackMessage({ text: `Status updated to "${newStatus}". System audit log registered.`, type: 'success' });
       await loadComplaintData();
     } catch (err: unknown) {
@@ -395,7 +424,7 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
               <div className="font-bold text-amber-950 flex flex-wrap items-center gap-2">
                 <span className="text-sm">Potential Cross-Bureau Overlap Detected</span>
                 <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-amber-200 text-amber-900 uppercase">
-                  {overlapAlert.tier} CONFIDENCE ({overlapAlert.confidence_pct}%)
+                  Match Score: {overlapAlert.confidence_pct}%
                 </span>
                 <span className="text-slate-600 font-mono text-[11px]">
                   Matching Case: {overlapAlert.case_a_id === complaint.complaint_number ? overlapAlert.case_b_id : overlapAlert.case_a_id} ({overlapAlert.case_a_id === complaint.complaint_number ? overlapAlert.cell_b : overlapAlert.cell_a} Desk)
@@ -428,38 +457,44 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
               <span className="font-mono text-base font-extrabold text-[#0b3b60] bg-white px-3 py-1 rounded border border-slate-300 shadow-sm">
                 {complaint.complaint_number}
               </span>
-              <span className={`px-2.5 py-0.5 rounded text-xs font-bold border ${
-                complaint.priority === 'Urgent'
-                  ? 'bg-red-100 text-red-800 border-red-300'
-                  : complaint.priority === 'High'
-                  ? 'bg-amber-100 text-amber-900 border-amber-300'
-                  : 'bg-slate-100 text-slate-700 border-slate-300'
-              }`}>
-                {complaint.priority.toUpperCase()} PRIORITY
-              </span>
             </div>
 
             {/* Quick Status Workflow Selector */}
-            <form onSubmit={handleStatusChange} className="flex items-center space-x-2">
-              <label className="text-xs font-semibold text-slate-600 shrink-0">Workflow Status:</label>
-              <select
-                value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value as ComplaintStatus)}
-                className="text-xs border border-slate-300 rounded px-2.5 py-1.5 bg-white font-semibold text-slate-800 focus:ring-2 focus:ring-[#0b3b60]"
-              >
-                {ALL_STATUSES.map((st) => (
-                  <option key={st} value={st}>
-                    {st}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                disabled={isUpdatingStatus || newStatus === complaint.status}
-                className="px-3 py-1.5 bg-[#0b3b60] text-white text-xs font-semibold rounded hover:bg-[#072a45] disabled:opacity-40"
-              >
-                {isUpdatingStatus ? 'Saving...' : 'Update'}
-              </button>
+            <form onSubmit={handleStatusChange} className="flex flex-col items-stretch gap-2">
+              <div className="flex items-center justify-end space-x-2">
+                <label className="text-xs font-semibold text-slate-600 shrink-0">Workflow Status:</label>
+                <select
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value as ComplaintStatus)}
+                  className="text-xs border border-slate-300 rounded px-2.5 py-1.5 bg-white font-semibold text-slate-800 focus:ring-2 focus:ring-[#0b3b60]"
+                >
+                  {ALL_STATUSES.map((st) => (
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="submit"
+                  disabled={isUpdatingStatus || newStatus === complaint.status}
+                  className="px-3 py-1.5 bg-[#0b3b60] text-white text-xs font-semibold rounded hover:bg-[#072a45] disabled:opacity-40"
+                >
+                  {isUpdatingStatus ? 'Saving...' : 'Update'}
+                </button>
+              </div>
+              {newStatus === 'On Hold' && newStatus !== complaint.status && (
+                <label className="text-xs text-slate-600">
+                  Reason for placing this complaint on hold <span className="text-red-500">*</span>
+                  <textarea
+                    value={onHoldReason}
+                    onChange={(e) => setOnHoldReason(e.target.value)}
+                    required
+                    rows={2}
+                    placeholder="Enter the reason for placing this complaint on hold..."
+                    className="mt-1 w-full min-w-64 text-xs border border-slate-300 rounded px-2.5 py-1.5 bg-white text-slate-800 focus:ring-2 focus:ring-[#0b3b60]"
+                  />
+                </label>
+              )}
             </form>
           </div>
 
@@ -551,6 +586,14 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
                 {complaint.due_at ? new Date(complaint.due_at).toLocaleDateString() : 'Open Timeline'}
               </span>
             </div>
+            {complaint.status === 'On Hold' && (
+              <div>
+                <span className="text-slate-500">On Hold Reason:</span>{' '}
+                <span className="font-semibold text-amber-800">
+                  {onHoldReason || 'No hold reason recorded.'}
+                </span>
+              </div>
+            )}
             {complaint.resolved_at && (
               <div className="text-emerald-700 font-semibold">
                 Resolved on: {new Date(complaint.resolved_at).toLocaleDateString()}
@@ -562,7 +605,7 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
         {/* Full Allegation Description */}
         <div className="p-6 border-t border-slate-200">
           <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2">
-            Grievance Particulars & Allegation Description
+            Grievance Particulars &amp; Allegation Description
           </h4>
           <div className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-4 rounded border border-slate-200 whitespace-pre-wrap font-sans">
             {complaint.description}

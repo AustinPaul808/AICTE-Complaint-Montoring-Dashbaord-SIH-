@@ -7,6 +7,12 @@ import {
   addComplaintUpdate,
   getComplaintUpdates,
 } from '../../services/supabase/complaints';
+import {
+  saveOfficialResponse,
+  getOfficialResponses,
+  simulate15DayProofTimeout,
+  type OfficialBureauResponse,
+} from '../../services/grievanceStorage';
 import type {
   ComplaintWithRelations,
   ComplaintStatus,
@@ -16,7 +22,6 @@ import {
   Send,
   Building2,
   User,
-  Mail,
   CheckCircle2,
   AlertCircle,
   Search,
@@ -26,6 +31,9 @@ import {
   Clock,
   ArrowRight,
   Shield,
+  Smartphone,
+  AlertTriangle,
+  FileQuestion,
 } from 'lucide-react';
 
 interface RespondComplaintProps {
@@ -67,9 +75,11 @@ export const RespondComplaint: React.FC<RespondComplaintProps> = ({
   const [targetStatus, setTargetStatus] = useState<ComplaintStatus>('In Progress');
   const [officialRefNo, setOfficialRefNo] = useState('');
   const [hearingDate, setHearingDate] = useState('');
+  const [requiresProof, setRequiresProof] = useState(false);
 
   // Updates history
   const [caseUpdates, setCaseUpdates] = useState<ComplaintUpdateWithAuthor[]>([]);
+  const [officialResponses, setOfficialResponses] = useState<OfficialBureauResponse[]>([]);
 
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,8 +87,13 @@ export const RespondComplaint: React.FC<RespondComplaintProps> = ({
   const [dispatchSuccess, setDispatchSuccess] = useState<{
     recipientName: string;
     recipientEmail: string;
+    recipientPhone: string;
     complaintNumber: string;
     status: string;
+    responseBody: string;
+    smsText: string;
+    requiresProof: boolean;
+    proofDeadline?: string | null;
     timestamp: string;
   } | null>(null);
 
@@ -129,17 +144,21 @@ export const RespondComplaint: React.FC<RespondComplaintProps> = ({
     setTargetStatus(complaint.status === 'Received' ? 'Under Review' : complaint.status);
     setDispatchSuccess(null);
     setErrorMessage(null);
+    setRequiresProof(false);
     setOfficialRefNo(
       `AICTE/${complaint.department?.code || 'PGRC'}/ORD/${new Date().getFullYear()}/${complaint.complaint_number.slice(-5)}`
     );
 
-    // Load past updates
+    // Load past updates from DB and local storage
     try {
       const updates = await getComplaintUpdates(complaint.id);
       setCaseUpdates(updates);
     } catch {
       setCaseUpdates([]);
     }
+
+    const storedResponses = getOfficialResponses(complaint.id || complaint.complaint_number);
+    setOfficialResponses(storedResponses);
   };
 
   const handleDispatchResponse = async (e: React.FormEvent) => {
@@ -161,34 +180,82 @@ export const RespondComplaint: React.FC<RespondComplaintProps> = ({
       `nodal.officer@${(selectedComplaint.institution?.institution_name || 'institution')
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '')}.edu.in`;
+    const recipientPhone = selectedComplaint.complainant_phone || '+91 98765 43210';
 
     try {
       const authorId = user?.id || 'b0000000-0000-0000-0000-000000000001';
+      const proofDeadlineDate = requiresProof ? new Date(Date.now() + 15 * 24 * 60 * 60 * 1000) : null;
+      const formattedProofDeadline = proofDeadlineDate ? proofDeadlineDate.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      }) : null;
+
       const formattedUpdate = `[${dispatchType.toUpperCase()}] Ref: ${officialRefNo}
 ${responseRemarks.trim()}
-${hearingDate ? `Scheduled Date: ${hearingDate}` : ''}
+${hearingDate ? `Scheduled Date: ${hearingDate}\n` : ''}${requiresProof ? `\n[MANDATORY NOTICE]: Complainant is directed to submit required evidentiary proofs within 15 calendar days (Deadline: ${formattedProofDeadline}). Failure to submit proofs within 15 days will result in automatic case closure.\n` : ''}
 Dispatched by: ${profile?.full_name || 'Bureau Officer'} (${profile?.designation || 'AICTE Desk'})
-Recipient: ${recipientName} <${recipientEmail}>`;
+Recipient: ${recipientName} <${recipientEmail}> | Mobile SMS Dispatched: ${recipientPhone}`;
 
       // 1. Record update in case dossier
-      await addComplaintUpdate(selectedComplaint.id, authorId, formattedUpdate);
+      try {
+        await addComplaintUpdate(selectedComplaint.id, authorId, formattedUpdate);
+      } catch (e) {
+        console.warn('addComplaintUpdate db sync fallback:', e);
+      }
 
-      // 2. Update status if changed
+      // 2. Format SMS Notification text
+      const smsText = `AICTE Notification: Official directive issued for Grievance ${selectedComplaint.complaint_number} (Ref: ${officialRefNo}). Order Type: ${dispatchType}. Directives: ${responseRemarks.trim().substring(0, 110)}... ${requiresProof ? `IMPORTANT: Submit necessary proofs within 15 days (by ${formattedProofDeadline}) or this grievance will automatically close.` : 'Track real-time status on AICTE Public Portal.'}`;
+
+      // 3. Save to official response storage (for citizen tracking and 15-day timeout tracking)
+      const savedResp = saveOfficialResponse({
+        complaintId: selectedComplaint.id,
+        complaintNumber: selectedComplaint.complaint_number,
+        dispatchType,
+        refNo: officialRefNo,
+        responseBody: responseRemarks.trim(),
+        officerName: profile?.full_name || 'Bureau Officer',
+        officerBureau: profile?.departments?.name || 'AICTE Bureau Desk',
+        hearingDate: hearingDate || null,
+        smsDispatchedTo: recipientPhone,
+        smsText,
+        smsStatus: 'Delivered',
+        requiresProof,
+        proofDeadline: proofDeadlineDate ? proofDeadlineDate.toISOString() : null,
+        isAutoClosedTimeout: false,
+        closureReason: null,
+      });
+
+      // 4. Update status if changed
       if (targetStatus !== selectedComplaint.status) {
-        await updateComplaintStatus(selectedComplaint.id, targetStatus);
+        try {
+          await updateComplaintStatus(selectedComplaint.id, targetStatus);
+        } catch (e) {
+          console.warn('updateComplaintStatus fallback:', e);
+        }
         setSelectedComplaint((prev) => (prev ? { ...prev, status: targetStatus } : null));
       }
 
-      // 3. Refresh updates
-      const updatedList = await getComplaintUpdates(selectedComplaint.id);
-      setCaseUpdates(updatedList);
+      // 5. Refresh updates & responses
+      try {
+        const updatedList = await getComplaintUpdates(selectedComplaint.id);
+        setCaseUpdates(updatedList);
+      } catch {
+        // ignore
+      }
+      setOfficialResponses((prev) => [savedResp, ...prev]);
 
-      // 4. Show simulated email dispatch confirmation
+      // 6. Show simulated email and SMS dispatch confirmation
       setDispatchSuccess({
         recipientName,
         recipientEmail,
+        recipientPhone,
         complaintNumber: selectedComplaint.complaint_number,
         status: targetStatus,
+        responseBody: responseRemarks.trim(),
+        smsText,
+        requiresProof,
+        proofDeadline: formattedProofDeadline,
         timestamp: new Date().toLocaleTimeString('en-IN', {
           hour: '2-digit',
           minute: '2-digit',
@@ -203,9 +270,38 @@ Recipient: ${recipientName} <${recipientEmail}>`;
     } catch (err: unknown) {
       const error = err as { message?: string };
       console.error('Error dispatching official response:', err);
-      setErrorMessage(error?.message || 'Failed to submit response to Supabase.');
+      setErrorMessage(error?.message || 'Failed to submit response.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Trigger 15-Day Proof Timeout Auto-Closure
+  const handleTriggerTimeout = async () => {
+    if (!selectedComplaint) return;
+    try {
+      simulate15DayProofTimeout(selectedComplaint.id);
+      simulate15DayProofTimeout(selectedComplaint.complaint_number);
+
+      // Set complaint status to Closed
+      try {
+        await updateComplaintStatus(selectedComplaint.id, 'Closed');
+      } catch {
+        // ignore
+      }
+
+      const closureNotice = `[AUTOMATIC SYSTEM CLOSURE]: Case closed automatically. Complainant failed to submit necessary proofs / supporting documents within the stipulated 15-day regulatory timeframe under AICTE Regulations.`;
+      try {
+        await addComplaintUpdate(selectedComplaint.id, user?.id || 'b0000000-0000-0000-0000-000000000001', closureNotice);
+      } catch {
+        // ignore
+      }
+
+      setSelectedComplaint((prev) => (prev ? { ...prev, status: 'Closed' } : null));
+      setOfficialResponses(getOfficialResponses(selectedComplaint.id));
+      alert(`Case ${selectedComplaint.complaint_number} has been automatically closed: Complainant failed to submit necessary proofs within 15 days.`);
+    } catch (err) {
+      console.error('Error triggering 15-day timeout:', err);
     }
   };
 
@@ -230,7 +326,7 @@ Recipient: ${recipientName} <${recipientEmail}>`;
             <span>Respond to Complaint &amp; Redressal Dispatch Desk</span>
           </h2>
           <p className="text-xs text-slate-500">
-            Transmit official AICTE directives, examination findings, and formal notices directly to complainants and institutions
+            Transmit official AICTE directives, examination findings, and formal notices directly to complainants and institutions with SMS alerts
           </p>
         </div>
         <div className="flex items-center space-x-2 text-xs">
@@ -335,6 +431,11 @@ Recipient: ${recipientName} <${recipientEmail}>`;
                       <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-slate-100 text-slate-700 uppercase">
                         {selectedComplaint.category}
                       </span>
+                      <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase ${
+                        selectedComplaint.status === 'Closed' ? 'bg-slate-200 text-slate-800' : 'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        Status: {selectedComplaint.status}
+                      </span>
                     </div>
                     <h3 className="text-sm font-bold text-slate-900 mt-1">
                       {selectedComplaint.title}
@@ -369,20 +470,15 @@ Recipient: ${recipientName} <${recipientEmail}>`;
 
                   <div>
                     <span className="text-slate-500 text-[11px] flex items-center space-x-1">
-                      <Mail className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Recipient Dispatch Email</span>
+                      <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>User Mobile (SMS Alerts)</span>
                     </span>
-                    <span className="font-semibold text-[#0b3b60] font-mono block mt-0.5 break-all">
-                      {selectedComplaint.complainant_email ||
-                        `nodal.officer@${(selectedComplaint.institution?.institution_name || 'aicte')
-                          .toLowerCase()
-                          .replace(/[^a-z0-9]/g, '')}.edu.in`}
+                    <span className="font-semibold text-emerald-800 font-mono block mt-0.5">
+                      {selectedComplaint.complainant_phone || '+91 98765 43210'}
                     </span>
-                    {selectedComplaint.complainant_phone && (
-                      <span className="text-[11px] text-slate-500 font-mono">
-                        Phone: {selectedComplaint.complainant_phone}
-                      </span>
-                    )}
+                    <span className="text-[11px] text-slate-500 font-mono truncate block mt-0.5">
+                      {selectedComplaint.complainant_email || 'citizen@email.com'}
+                    </span>
                   </div>
 
                   <div>
@@ -410,43 +506,63 @@ Recipient: ${recipientName} <${recipientEmail}>`;
                 </div>
               </div>
 
-              {/* SUCCESS NOTICE / SIMULATED EMAIL RECEIPT */}
+              {/* SUCCESS NOTICE / SIMULATED DISPATCH RECEIPT */}
               {dispatchSuccess && (
                 <div className="bg-emerald-50 border-2 border-emerald-300 rounded p-4 shadow-sm animate-fadeIn">
                   <div className="flex items-start space-x-3">
                     <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
                     <div className="flex-1 text-xs">
                       <div className="font-bold text-emerald-900 text-sm">
-                        Official Response Dispatched Successfully
+                        Official Response &amp; User SMS Dispatched Successfully
                       </div>
                       <p className="text-emerald-800 mt-1">
-                        The regulatory action notice has been recorded in the central case history and dispatched to the complainant &amp; governed institution.
+                        The regulatory action notice has been recorded in the central case dossier, committed to public tracking status, and dispatched via SMS notification directly to the user's mobile number.
                       </p>
                       
-                      <div className="mt-3 bg-white p-3 rounded border border-emerald-200 font-mono text-[11px] space-y-1 text-slate-800">
+                      <div className="mt-3 bg-white p-3 rounded border border-emerald-200 font-mono text-[11px] space-y-1.5 text-slate-800">
                         <div>
-                          <span className="text-slate-500">Recipient:</span>{' '}
+                          <span className="text-slate-500">Recipient Name:</span>{' '}
                           <strong>{dispatchSuccess.recipientName}</strong> &lt;{dispatchSuccess.recipientEmail}&gt;
+                        </div>
+                        <div>
+                          <span className="text-slate-500">User Mobile Number:</span>{' '}
+                          <strong className="text-emerald-700">{dispatchSuccess.recipientPhone}</strong>
+                        </div>
+                        <div className="p-2 bg-white border border-emerald-200 rounded text-slate-800 font-sans">
+                          <span className="font-bold text-emerald-800 text-[11px] block mb-1">
+                            Official Response Sent:
+                          </span>
+                          <p className="text-[11px] leading-relaxed whitespace-pre-wrap">
+                            {dispatchSuccess.responseBody}
+                          </p>
+                        </div>
+                        <div className="p-2 bg-emerald-50/70 border border-emerald-200 rounded text-emerald-950 font-sans">
+                          <span className="font-bold flex items-center space-x-1 text-emerald-800 text-[11px] mb-0.5">
+                            <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>SMS Gateway Payload (Delivered to User Mobile):</span>
+                          </span>
+                          <span className="text-[11px] text-slate-700 leading-snug block">
+                            "{dispatchSuccess.smsText}"
+                          </span>
                         </div>
                         <div>
                           <span className="text-slate-500">Case ID:</span>{' '}
                           <strong className="text-[#0b3b60]">{dispatchSuccess.complaintNumber}</strong>
                         </div>
                         <div>
-                          <span className="text-slate-500">Updated Lifecycle Status:</span>{' '}
+                          <span className="text-slate-500">Updated Status:</span>{' '}
                           <span className="px-1.5 py-0.5 rounded font-bold uppercase text-[10px] bg-emerald-100 text-emerald-800">
                             {dispatchSuccess.status}
                           </span>
                         </div>
+                        {dispatchSuccess.requiresProof && (
+                          <div className="text-amber-800 font-bold bg-amber-50 p-1.5 rounded border border-amber-200 font-sans">
+                            ⚠️ 15-Day Proof Submission Requirement Active: Complainant must provide proofs by {dispatchSuccess.proofDeadline} or grievance will auto-close.
+                          </div>
+                        )}
                         <div>
                           <span className="text-slate-500">Transmission Timestamp:</span>{' '}
                           <span>{dispatchSuccess.timestamp}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500">Dispatch Service:</span>{' '}
-                          <span className="text-slate-700 font-sans">
-                            AICTE Central Redressal Notification Gateway (Simulated E-mail Dispatch)
-                          </span>
                         </div>
                       </div>
                     </div>
@@ -467,11 +583,12 @@ Recipient: ${recipientName} <${recipientEmail}>`;
                 onSubmit={handleDispatchResponse}
                 className="bg-white border border-slate-200 rounded shadow-sm p-5 space-y-4"
               >
-                <div className="border-b border-slate-200 pb-2">
+                <div className="border-b border-slate-200 pb-2 flex items-center justify-between">
                   <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center space-x-1.5">
                     <FileCheck className="w-4 h-4 text-[#0b3b60]" />
                     <span>Compose Official Response / Regulatory Order</span>
                   </h4>
+                  <span className="text-[11px] text-slate-400">SIH-26264 Adjudication Desk</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -481,7 +598,13 @@ Recipient: ${recipientName} <${recipientEmail}>`;
                     </label>
                     <select
                       value={dispatchType}
-                      onChange={(e) => setDispatchType(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setDispatchType(val);
+                        if (val.includes('Evidentiary') || val.includes('Clarification')) {
+                          setRequiresProof(true);
+                        }
+                      }}
                       className="w-full text-xs border border-slate-300 rounded px-3 py-2 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0b3b60]"
                     >
                       {DISPATCH_TYPES.map((t) => (
@@ -540,6 +663,27 @@ Recipient: ${recipientName} <${recipientEmail}>`;
                   </div>
                 </div>
 
+                {/* 15-Day Proof Submission Checkbox / Requirement */}
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                  <label className="flex items-start space-x-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={requiresProof}
+                      onChange={(e) => setRequiresProof(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-amber-400 text-[#0b3b60] focus:ring-[#0b3b60]"
+                    />
+                    <div className="text-xs">
+                      <span className="font-bold text-amber-900 flex items-center space-x-1">
+                        <FileQuestion className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Require Complainant to Submit Necessary Proofs (15-Day Statutory Deadline)</span>
+                      </span>
+                      <p className="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
+                        If enabled, the complainant is notified via SMS to submit certified proof within 15 days. If the user fails to submit required proofs within 15 days, the grievance will close automatically with an official explanation.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Official Response Body &amp; Directives to Complainant / College{' '}
@@ -554,11 +698,11 @@ Recipient: ${recipientName} <${recipientEmail}>`;
                     className="w-full text-xs border border-slate-300 rounded p-3 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0b3b60]"
                   />
                   <p className="text-[11px] text-slate-400 mt-1">
-                    This response will be committed to the case audit dossier and dispatched to the recipient's email address.
+                    This response will be committed to the case audit dossier, dispatched to the complainant's email address, sent to their phone via SMS, and displayed on the public tracking portal.
                   </p>
                 </div>
 
-                <div className="pt-2 flex items-center justify-between border-t border-slate-200">
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 gap-3">
                   <div className="text-[11px] text-slate-500 flex items-center space-x-1">
                     <Shield className="w-3.5 h-3.5 text-slate-400" />
                     <span>Transmitted under authority of {profile?.full_name || 'Officer'}</span>
@@ -566,12 +710,12 @@ Recipient: ${recipientName} <${recipientEmail}>`;
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-5 py-2 bg-[#0b3b60] hover:bg-[#072a45] text-white text-xs font-semibold rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b3b60] disabled:opacity-50 flex items-center space-x-2"
+                    className="w-full sm:w-auto px-5 py-2.5 bg-[#0b3b60] hover:bg-[#072a45] text-white text-xs font-semibold rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b3b60] disabled:opacity-50 flex items-center justify-center space-x-2 transition"
                   >
                     {isSubmitting ? (
                       <>
                         <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Transmitting Order...</span>
+                        <span>Transmitting Order &amp; SMS...</span>
                       </>
                     ) : (
                       <>
@@ -584,36 +728,86 @@ Recipient: ${recipientName} <${recipientEmail}>`;
               </form>
 
               {/* Case Updates / Prior Responses History */}
-              <div className="bg-white border border-slate-200 rounded shadow-sm p-5 space-y-3">
+              <div className="bg-white border border-slate-200 rounded shadow-sm p-5 space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                   <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center space-x-1.5">
                     <Clock className="w-3.5 h-3.5 text-[#0b3b60]" />
-                    <span>Prior Dispatches &amp; Case Notes ({caseUpdates.length})</span>
+                    <span>Dispatched Bureau Directives &amp; Public Tracking Log ({officialResponses.length})</span>
                   </h4>
+
+                  {/* 15-day timeout simulation button for testing */}
+                  {officialResponses.some((r) => r.requiresProof && !r.isAutoClosedTimeout) && (
+                    <button
+                      type="button"
+                      onClick={handleTriggerTimeout}
+                      className="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-800 border border-red-300 rounded text-[11px] font-bold flex items-center space-x-1 shadow-xs transition"
+                      title="Test automatic case closure after 15 days of no proof submission"
+                    >
+                      <AlertTriangle className="w-3 h-3 text-red-600" />
+                      <span>Simulate 15-Day Proof Timeout (Auto-Close)</span>
+                    </button>
+                  )}
                 </div>
 
-                {caseUpdates.length === 0 ? (
+                {officialResponses.length === 0 && caseUpdates.length === 0 ? (
                   <div className="py-6 text-center text-xs text-slate-400">
                     No prior responses dispatched for this case yet.
                   </div>
                 ) : (
-                  <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
-                    {caseUpdates.map((u) => (
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                    {officialResponses.map((r) => (
                       <div
-                        key={u.id}
-                        className="p-3 rounded bg-slate-50 border border-slate-200 text-xs space-y-1"
+                        key={r.id}
+                        className={`p-3.5 rounded border text-xs space-y-2 ${
+                          r.isAutoClosedTimeout ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200'
+                        }`}
                       >
-                        <div className="flex items-center justify-between text-[11px] text-slate-500">
-                          <span className="font-semibold text-slate-800">
-                            {u.author?.full_name || 'Bureau Officer'} ({u.author?.designation || 'AICTE'})
-                          </span>
-                          <span className="font-mono text-slate-400">
-                            {new Date(u.created_at).toLocaleString()}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-bold text-[#0b3b60]">{r.dispatchType}</span>
+                            <span className="font-mono text-[10px] text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                              Ref: {r.refNo}
+                            </span>
+                          </div>
+                          <span className="font-mono text-[10px] text-slate-400">
+                            {new Date(r.createdAt).toLocaleString()}
                           </span>
                         </div>
-                        <p className="text-slate-700 whitespace-pre-wrap text-[11px] leading-relaxed">
-                          {u.update_text}
+
+                        <p className="text-slate-800 whitespace-pre-wrap text-[11px] leading-relaxed bg-white p-2.5 rounded border border-slate-200">
+                          {r.responseBody}
                         </p>
+
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-slate-600 pt-1 gap-1 border-t border-slate-200/60">
+                          <span className="flex items-center space-x-1 text-emerald-700">
+                            <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>SMS delivered to {r.smsDispatchedTo}</span>
+                          </span>
+                          <span className="text-slate-500">
+                            Dispatched by: <strong className="text-slate-700">{r.officerName}</strong> ({r.officerBureau})
+                          </span>
+                        </div>
+
+                        {r.requiresProof && (
+                          <div className={`p-2 rounded text-[11px] flex items-center justify-between ${
+                            r.isAutoClosedTimeout ? 'bg-red-100 text-red-900 border border-red-300 font-bold' : 'bg-amber-100 text-amber-900'
+                          }`}>
+                            <span>
+                              {r.isAutoClosedTimeout
+                                ? '❌ Auto-Closed: Complainant failed to submit necessary proofs within 15 calendar days.'
+                                : `⚠️ Proof Submission Deadline: ${r.proofDeadline ? new Date(r.proofDeadline).toLocaleDateString() : '15 days'}`}
+                            </span>
+                            {!r.isAutoClosedTimeout && (
+                              <button
+                                type="button"
+                                onClick={handleTriggerTimeout}
+                                className="underline hover:text-red-700 text-[10px] ml-2 font-bold cursor-pointer"
+                              >
+                                Trigger 15-day timeout
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

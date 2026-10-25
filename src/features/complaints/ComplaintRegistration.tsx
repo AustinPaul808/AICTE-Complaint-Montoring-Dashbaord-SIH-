@@ -49,7 +49,7 @@ export const ComplaintRegistration: React.FC<ComplaintRegistrationProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(COMPLAINT_CATEGORIES[0]);
-  const [priority, setPriority] = useState<ComplaintPriority>('Normal');
+  const priority: ComplaintPriority = 'Normal';
   const [assignedDepartmentId, setAssignedDepartmentId] = useState('');
   const [assignedOfficerId, setAssignedOfficerId] = useState('');
   const [dueAt, setDueAt] = useState('');
@@ -384,40 +384,22 @@ export const ComplaintRegistration: React.FC<ComplaintRegistrationProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Grievance Category <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                required
-                className="w-full text-xs border border-slate-300 rounded px-3 py-2 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0b3b60]"
-              >
-                {COMPLAINT_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Priority Classification <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as ComplaintPriority)}
-                required
-                className="w-full text-xs border border-slate-300 rounded px-3 py-2 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0b3b60]"
-              >
-                <option value="Normal">Normal (Routine timeline - 30 days)</option>
-                <option value="High">High (Serious non-compliance - 14 days)</option>
-                <option value="Urgent">Urgent (Vigilance / Immediate inspection required - 7 days)</option>
-              </select>
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Grievance Category <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              required
+              className="w-full text-xs border border-slate-300 rounded px-3 py-2 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0b3b60]"
+            >
+              {COMPLAINT_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

@@ -17,8 +17,20 @@ import {
   X,
   Clock,
   Sparkles,
-  Tag,
 } from 'lucide-react';
+
+const formatTimeApart = (firstDate?: string | null, secondDate?: string | null): string => {
+  const firstTime = firstDate ? new Date(firstDate).getTime() : NaN;
+  const secondTime = secondDate ? new Date(secondDate).getTime() : NaN;
+  if (!Number.isFinite(firstTime) || !Number.isFinite(secondTime)) return 'Time unavailable';
+
+  const totalMinutes = Math.floor(Math.abs(firstTime - secondTime) / 60_000);
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+
+  return `${days} days, ${hours} hrs, ${minutes} mins`;
+};
 
 interface OverlapDashboardProps {
   onSelectComplaint?: (id: string) => void;
@@ -31,7 +43,6 @@ export const OverlapDashboard: React.FC<OverlapDashboardProps> = ({ onSelectComp
   const [isLoading, setIsLoading] = useState(true);
 
   // Filters
-  const [selectedTier, setSelectedTier] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Side-by-side comparison modal state
@@ -109,7 +120,6 @@ export const OverlapDashboard: React.FC<OverlapDashboardProps> = ({ onSelectComp
       );
 
   const filteredAlerts = bureauAlerts.filter((a) => {
-    if (selectedTier !== 'ALL' && a.tier !== selectedTier) return false;
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       return (
@@ -169,7 +179,7 @@ export const OverlapDashboard: React.FC<OverlapDashboardProps> = ({ onSelectComp
       )}
 
       {/* KPI Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white border border-slate-200 rounded p-4 shadow-sm">
           <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
             Total Overlaps Detected
@@ -182,24 +192,14 @@ export const OverlapDashboard: React.FC<OverlapDashboardProps> = ({ onSelectComp
           </div>
         </div>
 
-        <div className="bg-white border border-red-200 bg-red-50/30 rounded p-4 shadow-sm">
-          <div className="text-[11px] font-semibold text-red-700 uppercase tracking-wide">
-            High Confidence (&ge;70%)
+        <div className="bg-white border border-blue-200 bg-blue-50/30 rounded p-4 shadow-sm">
+          <div className="text-[11px] font-semibold text-blue-800 uppercase tracking-wide">
+            Average Match Score
           </div>
-          <div className="text-2xl font-extrabold text-red-700 mt-1 font-mono">
-            {detectionResult?.stats.high_count ?? 0}
+          <div className="text-2xl font-extrabold text-blue-800 mt-1 font-mono">
+            {detectionResult?.stats.average_confidence_pct ?? 0}%
           </div>
-          <div className="text-[10px] text-red-600 mt-0.5">Immediate coordination required</div>
-        </div>
-
-        <div className="bg-white border border-amber-200 bg-amber-50/30 rounded p-4 shadow-sm">
-          <div className="text-[11px] font-semibold text-amber-800 uppercase tracking-wide">
-            Medium / Low Inquiries
-          </div>
-          <div className="text-2xl font-extrabold text-amber-700 mt-1 font-mono">
-            {(detectionResult?.stats.medium_count ?? 0) + (detectionResult?.stats.low_count ?? 0)}
-          </div>
-          <div className="text-[10px] text-amber-700 mt-0.5">Cross-cell monitoring active</div>
+          <div className="text-[10px] text-blue-700 mt-0.5">Across detected overlaps</div>
         </div>
 
         <div className="bg-white border border-slate-200 rounded p-4 shadow-sm">
@@ -228,22 +228,6 @@ export const OverlapDashboard: React.FC<OverlapDashboardProps> = ({ onSelectComp
           </div>
         </div>
 
-        <div className="flex items-center space-x-1.5 self-end sm:self-auto text-xs">
-          <span className="text-slate-500 font-medium">Confidence Tier:</span>
-          {['ALL', 'HIGH', 'MEDIUM', 'LOW'].map((tier) => (
-            <button
-              key={tier}
-              onClick={() => setSelectedTier(tier)}
-              className={`px-2.5 py-1 rounded text-[11px] font-bold transition ${
-                selectedTier === tier
-                  ? 'bg-[#0b3b60] text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {tier}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Alerts Feed */}
@@ -265,27 +249,15 @@ export const OverlapDashboard: React.FC<OverlapDashboardProps> = ({ onSelectComp
           filteredAlerts.map((alert) => (
             <div
               key={alert.alert_id}
-              className={`bg-white border rounded shadow-sm overflow-hidden transition hover:shadow-md ${
-                alert.tier === 'HIGH'
-                  ? 'border-red-300 ring-1 ring-red-100'
-                  : alert.tier === 'MEDIUM'
-                  ? 'border-amber-300'
-                  : 'border-slate-300'
-              }`}
+              className="bg-white border border-slate-300 rounded shadow-sm overflow-hidden transition hover:shadow-md"
             >
               {/* Alert Header */}
               <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex items-center space-x-2">
                   <span
-                    className={`px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider ${
-                      alert.tier === 'HIGH'
-                        ? 'bg-red-100 text-red-800 border border-red-300'
-                        : alert.tier === 'MEDIUM'
-                        ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                        : 'bg-blue-100 text-blue-800 border border-blue-200'
-                    }`}
+                    className="px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-blue-100 text-blue-800 border border-blue-200"
                   >
-                    {alert.tier} CONFIDENCE ({alert.confidence_pct}%)
+                    Match Score: {alert.confidence_pct}%
                   </span>
                   <span className="font-mono text-xs text-slate-500">
                     ID: {alert.alert_id}
@@ -306,13 +278,6 @@ export const OverlapDashboard: React.FC<OverlapDashboardProps> = ({ onSelectComp
                   >
                     <Link2 className="w-3.5 h-3.5 text-amber-300" />
                     <span>Link &amp; Coordinate</span>
-                  </button>
-                  <button
-                    onClick={() => handleDismissAlert(alert)}
-                    className="px-2 py-1 text-xs text-slate-400 hover:text-red-600"
-                    title="Dismiss as false positive"
-                  >
-                    <X className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -400,13 +365,13 @@ export const OverlapDashboard: React.FC<OverlapDashboardProps> = ({ onSelectComp
                 {/* Signals Footnote */}
                 <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 pt-1 border-t border-slate-100">
                   <div className="flex items-center space-x-1">
-                    <Tag className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Category: <strong>{alert.signals.category_match.toUpperCase()}</strong></span>
-                  </div>
-                  <div>•</div>
-                  <div className="flex items-center space-x-1">
                     <Clock className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Filed <strong>{alert.signals.days_apart}</strong> days apart</span>
+                    <span>
+                      Filed <strong>{formatTimeApart(
+                        alert.case_a?.received_at || alert.case_a?.created_at,
+                        alert.case_b?.received_at || alert.case_b?.created_at
+                      )}</strong> apart
+                    </span>
                   </div>
                   {alert.signals.shared_terms.length > 0 && (
                     <>
