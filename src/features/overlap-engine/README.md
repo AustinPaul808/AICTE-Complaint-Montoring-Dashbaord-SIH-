@@ -53,10 +53,7 @@ $$\text{Confidence} = \text{inst\_conf} \times \frac{\sum w_i \cdot s_i}{\sum w_
 | **Category Alignment** | $0.20$ | Identical regulatory categories ($1.0$) vs related ($0.5$) vs distinct ($0.0$). |
 | **Temporal Proximity** | $0.10$ | Recency decay over a 90-day window: $\max(0, 1.0 - \text{days} / 90)$. |
 
-### Confidence Tiers
-- **HIGH CONFIDENCE ($\ge 70\%$)**: Urgent bilateral coordination required. Immediate inquiry duplication risk.
-- **MEDIUM CONFIDENCE ($\ge 50\%$)**: Cross-cell monitoring recommended. Overlapping institution with related violations.
-- **LOW CONFIDENCE ($\ge 30\%$)**: Same institution under review in separate bureaus for distinct regulatory matters.
+The engine reports a numeric match score for each detected overlap. Scores are used to order alerts and are not divided into high, medium, or low confidence categories.
 
 ---
 
