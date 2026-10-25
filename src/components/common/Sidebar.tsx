@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   FileText,
   MessageSquareReply,
+  Sparkles,
   Users,
   BarChart3,
   History,
@@ -32,6 +33,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
       label: 'All Complaints',
       icon: FileText,
       description: 'Search, filter & review cases',
+    },
+    {
+      id: 'overlap',
+      label: 'AI Overlap Engine',
+      icon: Sparkles,
+      description: 'Cross-bureau conflict discovery',
     },
     {
       id: 'respond',

@@ -8,6 +8,7 @@ import { Dashboard } from './features/dashboard/Dashboard';
 import { ComplaintList } from './features/complaints/ComplaintList';
 import { ComplaintRegistration } from './features/complaints/ComplaintRegistration';
 import { RespondComplaint } from './features/complaints/RespondComplaint';
+import { OverlapDashboard } from './features/overlap-engine/OverlapDashboard';
 import { ComplaintDetails } from './features/complaints/ComplaintDetails';
 import { AssignmentManagement } from './features/assignments/AssignmentManagement';
 import { ReportsView } from './features/reports/ReportsView';
@@ -67,6 +68,16 @@ const AuthenticatedPortal: React.FC = () => {
           />
         );
 
+      case 'overlap':
+        return (
+          <OverlapDashboard
+            onSelectComplaint={(id) => {
+              setSelectedComplaintId(id);
+              setCurrentTab('complaint-detail');
+            }}
+          />
+        );
+
       case 'respond':
         return (
           <RespondComplaint
@@ -98,6 +109,7 @@ const AuthenticatedPortal: React.FC = () => {
               setSelectedComplaintId(id);
               setCurrentTab('respond');
             }}
+            onNavigateToOverlap={() => setCurrentTab('overlap')}
           />
         ) : (
           <ComplaintList

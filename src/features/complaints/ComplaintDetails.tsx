@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
   getComplaintById,
+  getComplaints,
   updateComplaintStatus,
   updateComplaintAssignment,
   getComplaintUpdates,
@@ -11,6 +12,7 @@ import {
 } from '../../services/supabase/complaints';
 import { getDepartments, type Department } from '../../services/supabase/departments';
 import { getOfficersByDepartment, type UserProfile } from '../../services/supabase/users';
+import { detectOverlaps, type OverlapAlert } from '../overlap-engine/overlapDetector';
 import type {
   ComplaintWithRelations,
   ComplaintUpdateWithAuthor,
@@ -29,13 +31,16 @@ import {
   FileText,
   AlertTriangle,
   CheckCircle2,
-  Share2
+  Share2,
+  Sparkles,
+  ArrowRight
 } from 'lucide-react';
 
 interface ComplaintDetailsProps {
   complaintId: string;
   onBack: () => void;
   onRespond?: (id: string) => void;
+  onNavigateToOverlap?: () => void;
 }
 
 const ALL_STATUSES: ComplaintStatus[] = [
@@ -84,6 +89,7 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
   complaintId,
   onBack,
   onRespond,
+  onNavigateToOverlap,
 }) => {
   const { user } = useAuth();
 
@@ -93,6 +99,7 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
   const [auditLogs, setAuditLogs] = useState<AuditLogWithActor[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [deptOfficers, setDeptOfficers] = useState<UserProfile[]>([]);
+  const [overlapAlert, setOverlapAlert] = useState<OverlapAlert | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [newStatus, setNewStatus] = useState<ComplaintStatus>('Received');
@@ -132,6 +139,18 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
         setNewStatus(comp.status);
         setReassignDeptId(comp.assigned_department_id);
         setReassignOfficerId(comp.assigned_officer_id || '');
+
+        // Detect if this complaint overlaps with any case in another bureau
+        try {
+          const { data: allCases } = await getComplaints({ pageSize: 50 });
+          const detection = detectOverlaps(allCases);
+          const match = detection.alerts.find(
+            (a) => a.case_a_id === comp.complaint_number || a.case_b_id === comp.complaint_number
+          );
+          setOverlapAlert(match || null);
+        } catch {
+          setOverlapAlert(null);
+        }
       }
     } catch (err) {
       console.error('Error fetching complaint details:', err);
@@ -355,6 +374,42 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
             </button>
           </div>
         </form>
+      )}
+
+      {/* Cross-Bureau Overlap Intelligence Alert Banner */}
+      {overlapAlert && (
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fadeIn">
+          <div className="flex items-start space-x-3">
+            <div className="p-2 bg-amber-500 text-white rounded shrink-0 mt-0.5">
+              <Sparkles className="w-5 h-5 text-amber-100" />
+            </div>
+            <div className="text-xs">
+              <div className="font-bold text-amber-950 flex flex-wrap items-center gap-2">
+                <span className="text-sm">Potential Cross-Bureau Overlap Detected</span>
+                <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-amber-200 text-amber-900 uppercase">
+                  {overlapAlert.tier} CONFIDENCE ({overlapAlert.confidence_pct}%)
+                </span>
+                <span className="text-slate-600 font-mono text-[11px]">
+                  Matching Case: {overlapAlert.case_a_id === complaint.complaint_number ? overlapAlert.case_b_id : overlapAlert.case_a_id} ({overlapAlert.case_a_id === complaint.complaint_number ? overlapAlert.cell_b : overlapAlert.cell_a} Desk)
+                </span>
+              </div>
+              <p className="text-amber-900 mt-1 leading-relaxed text-[11px]">
+                {overlapAlert.reason}
+              </p>
+            </div>
+          </div>
+
+          {onNavigateToOverlap && (
+            <button
+              type="button"
+              onClick={onNavigateToOverlap}
+              className="px-4 py-2 bg-[#0b3b60] hover:bg-[#072a45] text-white text-xs font-semibold rounded shrink-0 shadow-xs flex items-center space-x-1.5 transition self-end sm:self-auto"
+            >
+              <span>Coordinate Inquiries</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       )}
 
       {/* Main Case Dossier Header */}

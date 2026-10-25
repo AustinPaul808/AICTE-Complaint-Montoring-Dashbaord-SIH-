@@ -6,7 +6,8 @@ import {
   Building2,
   ArrowRight,
   RefreshCw,
-  MessageSquareReply
+  MessageSquareReply,
+  Sparkles
 } from 'lucide-react';
 
 // Helper to format JSON metadata into clean, human-readable text
@@ -87,6 +88,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
             title="Refresh database metrics"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={() => onNavigateTab('overlap')}
+            className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded shadow-sm transition-colors flex items-center space-x-1.5"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-slate-900" />
+            <span>AI Overlap Intelligence</span>
           </button>
           <button
             onClick={() => onNavigateTab('respond')}

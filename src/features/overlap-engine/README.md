@@ -1,52 +1,87 @@
-# Future AI-Powered Overlapping Complaint Detection Engine
+# AICTE Cross-Bureau Overlap Intelligence Engine
 
-> **Status:** Deliberately Deferred (Future Implementation Phase)  
-> **Notice:** Per Section 7 of the Project Requirements Document (SIH Problem Statement ID: 26264), no AI matching logic, embedding models, vector search, or mock detection algorithms are implemented during this phase.
-
----
-
-## 1. Purpose of the Future Engine
-In multi-departmental governance environments like AICTE, multiple bureaus (such as Regulation Bureau [RB], Public Grievance Redressal Cell [PGRC], Approval Bureau [AB], and Policy Bureau) frequently receive complaints relating to the same institution or underlying dispute.
-
-Without automated semantic matching, officers across bureaus investigate duplicate or overlapping issues independently, resulting in:
-- Redundant investigation efforts.
-- Inconsistent regulatory orders or administrative findings.
-- Fragmented institutional compliance histories.
-
-The future Overlap Engine will automate the discovery of semantically related and duplicate complaints across bureau boundaries.
+> **Status:** Fully Integrated & Operational (SIH Problem Statement ID: 26264)  
+> **Engine Core:** Standalone Standard-Library Python Engine + Real-Time Client-Side TypeScript Port
 
 ---
 
-## 2. Planned Inputs
-The engine will consume standardized complaint records stored in the primary Supabase PostgreSQL database:
-- `institutions.aicte_permanent_id` and `institutions.id`: Exact and fuzzy institutional matching.
-- `complaints.category`: Complaint domain categorization (e.g., faculty deficiency, fee caps, infrastructure).
-- `complaints.title` and `complaints.description`: Unstructured textual grievances.
-- `complaints.received_at`: Temporal proximity windows.
-- Supporting documents and attachment metadata.
+## 1. Overview & Problem Definition
+
+In multi-departmental governance environments like AICTE, multiple bureaus (Regulation Bureau [RB], Public Grievance Redressal Cell [PGRC], Approval Bureau [AB], and Policy Bureau) receive complaints concerning the same technical institution.
+
+Two cases are classified as a **Potential Cross-Bureau Overlap** when:
+1. They concern the **same technical institution** (resolved via AICTE permanent ID, exact name, alias, or fuzzy token alignment).
+2. They are being concurrently handled by **different Bureaus / Cells** (e.g., `RB` and `PGRC`).
+
+Text similarity, category alignment, and temporal recency raise or lower the **confidence score** ($0.0 - 1.0$), generating actionable alerts for bureau officers before conflicting regulatory directives or duplicate investigations occur.
 
 ---
 
-## 3. Planned Outputs
-When integrated, the engine will compute and output:
-- **Ranked Candidate Matches**: A list of existing complaints with similarity confidence scores ($0.00$ to $1.00$).
-- **Overlap Rationale**: Highlighting shared entities (same institution, same complainant, identical regulatory clauses).
-- **Cross-Bureau Review Flag**: Notifications to designated officers alerting them that a related case is under active investigation in another bureau.
+## 2. Integrated Architecture
+
+```mermaid
+graph TD
+    A[PostgreSQL Database / Supabase] -->|Realtime Complaints & Institutions| B(Dual Overlap Engine)
+    
+    subgraph Engine Pipeline
+        B --> C[1. Ingest & Validate]
+        C --> D[2. Institution Resolver]
+        D --> E[3. Blocking by Institution]
+        E --> F[4. Cross-Cell Pair Generation]
+        F --> G[5. Suppression Engine]
+        G --> H[6. Weighted Multi-Signal Confidence]
+        H --> I[7. Natural-Language Explanation]
+    end
+    
+    I --> J[AI Overlap Dashboard]
+    I --> K[Case Dossier Overlap Banners]
+    I --> L[Serverless Sync Service]
+```
 
 ---
 
-## 4. Planned Architecture & Integration
-- **Database Layer**: PostgreSQL `pgvector` extension for storing and indexing text embeddings.
-- **Embedding Pipeline**: Asynchronous background workers generating vector embeddings for incoming complaints without blocking standard complaint submission.
-- **Review Workflow**: A human-in-the-loop review interface allowing authorized bureau officers to confirm, link, or dismiss suggested overlaps.
+## 3. Scoring Formula & Signal Weights
+
+The confidence score is computed as:
+
+$$\text{Confidence} = \text{inst\_conf} \times \frac{\sum w_i \cdot s_i}{\sum w_i}$$
+
+| Signal ($s_i$) | Weight ($w_i$) | Description |
+| :--- | :---: | :--- |
+| **Base Entity Match** | $0.40$ | Both complaints concern the same institution across different cells. |
+| **Text Similarity** | $0.30$ | TF-IDF / Token Jaccard similarity across complaint titles & allegations. |
+| **Category Alignment** | $0.20$ | Identical regulatory categories ($1.0$) vs related ($0.5$) vs distinct ($0.0$). |
+| **Temporal Proximity** | $0.10$ | Recency decay over a 90-day window: $\max(0, 1.0 - \text{days} / 90)$. |
+
+### Confidence Tiers
+- **HIGH CONFIDENCE ($\ge 70\%$)**: Urgent bilateral coordination required. Immediate inquiry duplication risk.
+- **MEDIUM CONFIDENCE ($\ge 50\%$)**: Cross-cell monitoring recommended. Overlapping institution with related violations.
+- **LOW CONFIDENCE ($\ge 30\%$)**: Same institution under review in separate bureaus for distinct regulatory matters.
 
 ---
 
-## 5. Current Phase Development Restriction
-Implementation of the Overlap Engine is strictly excluded from Phase 1-5 development:
-- **No** embedding generation or machine learning models.
-- **No** similarity scoring algorithms or vector search extensions.
-- **No** fake/mock services pretending to compute duplicate clusters.
-- **No** database tables created purely for speculative overlap storage.
+## 4. Suppression Rules (Auditable Transparency)
 
-The AICTE Cross-Bureau Complaint Coordination Platform remains fully operational, authoritative, and secure using standard relational workflows in Supabase.
+Pairs meeting any of the following criteria are suppressed from the active alert queue:
+1. **`already_linked`**: Cases previously marked as coordinated by an AICTE officer.
+2. **`dismissed_by_officer`**: Human-in-the-loop audit determination marking the pair as distinct.
+3. **`closed_case`**: Either case is in a terminal state (`Resolved`, `Closed`, `Disposed`).
+4. **`below_min_confidence`**: Confidence score strictly below threshold ($< 30\%$).
+
+---
+
+## 5. Execution & Verification
+
+### Python Standalone CLI Sync
+Run the batch sync service directly against the live Supabase repository:
+
+```bash
+python3 overlap-engine/sync_service.py
+```
+
+### Interactive UI Dashboard
+Navigate to **AI Overlap Engine** in the sidebar to:
+- Inspect active cross-bureau conflicts.
+- Perform side-by-side case comparisons.
+- Link cases for joint inquiry coordination.
+- View real-time alert banners directly inside individual case dossiers.
