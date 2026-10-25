@@ -23,13 +23,6 @@ interface AIRecommendationPanelProps {
   ctx: ComplaintContext;
 }
 
-const ESCALATION_CONFIG = {
-  Low:      { color: 'text-emerald-700 bg-emerald-50 border-emerald-200',  dot: 'bg-emerald-500', label: 'Low Urgency' },
-  Medium:   { color: 'text-amber-700  bg-amber-50  border-amber-200',      dot: 'bg-amber-500',   label: 'Medium Urgency' },
-  High:     { color: 'text-orange-700 bg-orange-50 border-orange-200',     dot: 'bg-orange-500',  label: 'High Urgency' },
-  Critical: { color: 'text-red-700    bg-red-50    border-red-200',        dot: 'bg-red-600',     label: 'Critical — Immediate Action' },
-};
-
 export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({ ctx }) => {
   const [expanded, setExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,10 +45,6 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({ ct
       setIsLoading(false);
     }
   };
-
-  const esc = recommendation
-    ? ESCALATION_CONFIG[recommendation.escalation_flag] ?? ESCALATION_CONFIG.Medium
-    : null;
 
   return (
     <div className="border-2 border-violet-200 rounded-lg overflow-hidden shadow-sm bg-white">
@@ -147,7 +136,7 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({ ct
       {/* Recommendation Results */}
       {recommendation && expanded && !isLoading && (
         <div className="p-5 space-y-5 text-xs">
-          {/* Summary + Escalation Row */}
+          {/* Summary + Est. Resolution Row */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 bg-slate-50 border border-slate-200 rounded-md p-4">
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center space-x-1">
@@ -157,27 +146,13 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({ ct
               <p className="text-slate-800 leading-relaxed">{recommendation.summary}</p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:w-48 shrink-0">
-              {/* Escalation Flag */}
-              <div className={`border rounded-md p-3 ${esc!.color}`}>
-                <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5 opacity-70">
-                  Escalation Level
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${esc!.dot}`} />
-                  <span className="font-bold text-sm">{esc!.label}</span>
-                </div>
+            <div className="sm:w-44 shrink-0 border border-slate-200 rounded-md p-4 bg-slate-50 flex flex-col justify-center">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                Est. Resolution
               </div>
-
-              {/* Estimated days */}
-              <div className="border border-slate-200 rounded-md p-3 bg-slate-50">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                  Est. Resolution
-                </div>
-                <div className="font-bold text-slate-900 text-base">
-                  {recommendation.estimated_resolution_days}{' '}
-                  <span className="text-xs font-medium text-slate-500">days</span>
-                </div>
+              <div className="font-bold text-slate-900 text-lg">
+                {recommendation.estimated_resolution_days}{' '}
+                <span className="text-xs font-medium text-slate-500">days</span>
               </div>
             </div>
           </div>
@@ -264,12 +239,9 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({ ct
       {hasGenerated && !expanded && recommendation && !isLoading && (
         <div className="px-5 py-3 bg-violet-50/60 flex items-center justify-between text-xs">
           <div className="flex items-center space-x-3 text-slate-700">
-            <span className={`w-2 h-2 rounded-full ${ESCALATION_CONFIG[recommendation.escalation_flag]?.dot}`} />
             <span className="font-semibold text-violet-800">
-              {ESCALATION_CONFIG[recommendation.escalation_flag]?.label}
+              {recommendation.steps.length} execution steps
             </span>
-            <span className="text-slate-400">•</span>
-            <span>{recommendation.steps.length} execution steps</span>
             <span className="text-slate-400">•</span>
             <span>~{recommendation.estimated_resolution_days} day resolution</span>
           </div>
