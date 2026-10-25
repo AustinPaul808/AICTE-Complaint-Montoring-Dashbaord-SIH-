@@ -716,13 +716,28 @@ export const PublicGrievancePortal: React.FC<PublicGrievancePortalProps> = ({ on
                 <input
                   type="text"
                   value={loginInstSearch}
-                  onChange={(e) => setLoginInstSearch(e.target.value)}
+                  onChange={(e) => {
+                    setLoginInstSearch(e.target.value);
+                    // Clear selection if user is typing a new search
+                    if (loginInstitutionId) {
+                      const stillMatches = institutions.find((i) => i.id === loginInstitutionId && (
+                        i.institution_name.toLowerCase().includes(e.target.value.toLowerCase()) ||
+                        (i.aicte_permanent_id || '').toLowerCase().includes(e.target.value.toLowerCase()) ||
+                        i.state.toLowerCase().includes(e.target.value.toLowerCase())
+                      ));
+                      if (!stillMatches) setLoginInstitutionId('');
+                    }
+                  }}
                   placeholder="Search institution..."
                   className="w-full text-xs border border-slate-300 rounded px-3 py-2 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0b3b60] mb-2"
                 />
                 <select
                   value={loginInstitutionId}
-                  onChange={(e) => setLoginInstitutionId(e.target.value)}
+                  onChange={(e) => {
+                    setLoginInstitutionId(e.target.value);
+                    const selected = institutions.find((i) => i.id === e.target.value);
+                    if (selected) setLoginInstSearch(selected.institution_name);
+                  }}
                   required
                   size={4}
                   className="w-full text-xs border border-slate-300 rounded px-3 py-1.5 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0b3b60]"
@@ -994,13 +1009,28 @@ export const PublicGrievancePortal: React.FC<PublicGrievancePortalProps> = ({ on
                   <input
                     type="text"
                     value={institutionSearch}
-                    onChange={(e) => setInstitutionSearch(e.target.value)}
+                    onChange={(e) => {
+                      setInstitutionSearch(e.target.value);
+                      // Clear selection if user starts typing something new
+                      if (institutionId) {
+                        const stillMatches = institutions.find((i) => i.id === institutionId && (
+                          i.institution_name.toLowerCase().includes(e.target.value.toLowerCase()) ||
+                          (i.aicte_permanent_id || '').toLowerCase().includes(e.target.value.toLowerCase()) ||
+                          i.state.toLowerCase().includes(e.target.value.toLowerCase())
+                        ));
+                        if (!stillMatches) setInstitutionId('');
+                      }
+                    }}
                     placeholder="Search by Institution Name, AICTE ID, or State..."
                     className="w-full text-xs border border-slate-300 rounded px-3 py-2 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0b3b60] mb-2"
                   />
                   <select
                     value={institutionId}
-                    onChange={(e) => setInstitutionId(e.target.value)}
+                    onChange={(e) => {
+                      setInstitutionId(e.target.value);
+                      const selected = institutions.find((i) => i.id === e.target.value);
+                      if (selected) setInstitutionSearch(selected.institution_name);
+                    }}
                     required
                     size={4}
                     className="w-full text-xs border border-slate-300 rounded px-3 py-1 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0b3b60]"
