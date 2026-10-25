@@ -20,11 +20,17 @@ export interface DashboardMetrics {
   recentActivity: AuditLogWithActor[];
 }
 
-export async function getDashboardMetrics(): Promise<DashboardMetrics> {
+export async function getDashboardMetrics(departmentId?: string): Promise<DashboardMetrics> {
   // 1. Fetch complaints summary
-  const { data: rawComplaints, error: complaintsError } = await supabase
+  let complaintsQuery = supabase
     .from('complaints')
     .select('id, status, due_at, assigned_department_id, resolved_at, created_at');
+
+  if (departmentId && departmentId !== 'ALL') {
+    complaintsQuery = complaintsQuery.eq('assigned_department_id', departmentId);
+  }
+
+  const { data: rawComplaints, error: complaintsError } = await complaintsQuery;
 
   if (complaintsError) {
     console.error('Error fetching complaints for metrics:', complaintsError.message);
@@ -103,14 +109,18 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     }
   });
 
-  const departmentWorkload = departments.map((dept: DepartmentRow | DeptSummary) => ({
-    departmentId: dept.id,
-    departmentName: dept.name,
-    departmentCode: dept.code,
-    total: deptMap[dept.id]?.total || 0,
-    pending: deptMap[dept.id]?.pending || 0,
-    resolved: deptMap[dept.id]?.resolved || 0,
-  }));
+  const departmentWorkload = departments
+    .filter((dept: DepartmentRow | DeptSummary) => 
+      !departmentId || departmentId === 'ALL' || dept.id === departmentId
+    )
+    .map((dept: DepartmentRow | DeptSummary) => ({
+      departmentId: dept.id,
+      departmentName: dept.name,
+      departmentCode: dept.code,
+      total: deptMap[dept.id]?.total || 0,
+      pending: deptMap[dept.id]?.pending || 0,
+      resolved: deptMap[dept.id]?.resolved || 0,
+    }));
 
   return {
     totalComplaints: complaints.length,

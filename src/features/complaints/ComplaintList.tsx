@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { getComplaints, type ComplaintFilterOptions } from '../../services/supabase/complaints';
 import { getDepartments, type Department } from '../../services/supabase/departments';
 import type { ComplaintWithRelations, ComplaintStatus, ComplaintPriority } from '../../types/database.types';
@@ -23,6 +24,7 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
   onSelectComplaint,
   onNewComplaint,
 }) => {
+  const { profile, isAdmin, departmentCode } = useAuth();
   const [complaints, setComplaints] = useState<ComplaintWithRelations[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
@@ -30,17 +32,30 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
 
   // Filters
   const [search, setSearch] = useState('');
-  const [departmentId, setDepartmentId] = useState<string>('ALL');
+  const [departmentId, setDepartmentId] = useState<string>(
+    isAdmin ? 'ALL' : (profile?.department_id || 'ALL')
+  );
   const [status, setStatus] = useState<ComplaintStatus | 'ALL'>('ALL');
   const [priority, setPriority] = useState<ComplaintPriority | 'ALL'>('ALL');
   const [sortBy, setSortBy] = useState<'recent' | 'due_date' | 'priority'>('recent');
 
+  // Enforce bureau isolation for non-administrators
+  useEffect(() => {
+    if (!isAdmin && profile?.department_id) {
+      setDepartmentId(profile.department_id);
+    }
+  }, [isAdmin, profile?.department_id]);
+
   const fetchComplaints = useCallback(async () => {
     setIsLoading(true);
     try {
+      const effectiveDeptId = isAdmin
+        ? (departmentId !== 'ALL' ? departmentId : undefined)
+        : (profile?.department_id || undefined);
+
       const options: ComplaintFilterOptions = {
         search: search.trim() || undefined,
-        departmentId: departmentId !== 'ALL' ? departmentId : undefined,
+        departmentId: effectiveDeptId,
         status: status !== 'ALL' ? status : undefined,
         priority: priority !== 'ALL' ? priority : undefined,
         sortBy,
@@ -54,7 +69,7 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [search, departmentId, status, priority, sortBy]);
+  }, [search, departmentId, status, priority, sortBy, isAdmin, profile?.department_id]);
 
   useEffect(() => {
     getDepartments().then(setDepartments).catch(console.error);
@@ -110,13 +125,15 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
       <div className="bg-white border border-slate-200 rounded p-4 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-bold text-slate-900 flex items-center space-x-2">
-            <span>Central Grievance Registry</span>
+            <span>{isAdmin ? 'Central Grievance Registry' : `${departmentCode || 'Bureau'} Grievance Registry`}</span>
             <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-700 rounded-full border border-slate-200 font-mono font-medium">
-              {totalCount} Total Cases
+              {totalCount} {isAdmin ? 'Total Cases' : 'Desk Cases'}
             </span>
           </h2>
           <p className="text-xs text-slate-500">
-            Consolidated institution complaints across Regulation Bureau (RB), PGRC, and affiliated cells
+            {isAdmin 
+              ? 'Consolidated institution complaints across Regulation Bureau (RB), PGRC, and affiliated cells'
+              : `Authorized case files assigned strictly to ${profile?.departments?.name || departmentCode || 'your bureau'}. Other bureau files are restricted.`}
           </p>
         </div>
 
@@ -160,18 +177,27 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
 
           {/* Bureau Filter */}
           <div>
-            <select
-              value={departmentId}
-              onChange={(e) => setDepartmentId(e.target.value)}
-              className="w-full py-2 px-3 text-xs border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-[#0b3b60] bg-white text-slate-900"
-            >
-              <option value="ALL">All Bureaus & Cells</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} ({d.code})
-                </option>
-              ))}
-            </select>
+            {isAdmin ? (
+              <select
+                value={departmentId}
+                onChange={(e) => setDepartmentId(e.target.value)}
+                className="w-full py-2 px-3 text-xs border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-[#0b3b60] bg-white text-slate-900"
+              >
+                <option value="ALL">All Bureaus &amp; Cells</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.code})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="w-full py-2 px-3 text-xs border border-slate-200 rounded bg-slate-100 text-slate-700 font-semibold flex items-center justify-between">
+                <span>{departmentCode || 'Bureau'}: {profile?.departments?.name || 'Active Desk'}</span>
+                <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                  Locked
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Status Filter */}

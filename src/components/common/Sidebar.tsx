@@ -47,12 +47,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
       description: 'Manual response & email dispatch',
     },
     {
-      id: 'assignments',
-      label: 'Assignment Desk',
-      icon: Users,
-      description: 'Case transfers & officer allocation',
-    },
-    {
       id: 'reports',
       label: 'Reports & Analytics',
       icon: BarChart3,
@@ -66,7 +60,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
     },
   ];
 
+  // Administrative reallocation & user privilege management
   if (isAdmin) {
+    navItems.push({
+      id: 'assignments',
+      label: 'Assignment Desk',
+      icon: Users,
+      description: 'Case transfers & bureau reallocation',
+    });
     navItems.push({
       id: 'users',
       label: 'User Management',

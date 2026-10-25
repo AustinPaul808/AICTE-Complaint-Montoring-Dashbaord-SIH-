@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { getDashboardMetrics, type DashboardMetrics } from '../../services/supabase/reports';
 import {
   AlertTriangle,
@@ -50,13 +51,17 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
+  const { profile, isAdmin, departmentCode } = useAuth();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const bureauDeptId = !isAdmin ? (profile?.department_id || undefined) : undefined;
+  const bureauName = profile?.departments?.name || (departmentCode === 'RB' ? 'Regulation Bureau' : departmentCode === 'PGRC' ? 'Public Grievance Redressal Cell' : 'Assigned Bureau');
 
   const fetchMetrics = async () => {
     setIsLoading(true);
     try {
-      const data = await getDashboardMetrics();
+      const data = await getDashboardMetrics(bureauDeptId);
       setMetrics(data);
     } catch (err) {
       console.error('Error fetching dashboard statistics:', err);
@@ -67,18 +72,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
 
   useEffect(() => {
     fetchMetrics();
-  }, []);
+  }, [bureauDeptId]);
 
   return (
     <div className="space-y-6">
       {/* Top Welcome & Refresh */}
       <div className="bg-white border border-slate-200 rounded p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
+          <div className="flex items-center space-x-2 mb-1">
+            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+              isAdmin 
+                ? 'bg-red-100 text-red-800 border border-red-300' 
+                : 'bg-blue-100 text-[#0b3b60] border border-blue-200'
+            }`}>
+              {isAdmin ? 'Central Vigilance & Oversight' : `${departmentCode || 'BUREAU'} OPERATIONAL DESK`}
+            </span>
+          </div>
           <h2 className="text-base font-bold text-slate-900">
-            AICTE Inter-Bureau Case Monitoring Executive Dashboard
+            {isAdmin 
+              ? 'AICTE Inter-Bureau Case Monitoring Executive Dashboard'
+              : `AICTE ${bureauName} Case Monitoring Dashboard`}
           </h2>
           <p className="text-xs text-slate-500">
-            Real-time regulatory grievance metrics across Regulation Bureau, PGRC, and affiliated directorates
+            {isAdmin 
+              ? 'Real-time regulatory grievance metrics consolidated across Regulation Bureau, PGRC, Approval Bureau, and P&AP'
+              : `Authorized operational workspace for ${bureauName} (${departmentCode || 'Bureau'}). Filtered to your bureau's active cases.`}
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -117,7 +135,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
           <div className="text-2xl font-extrabold text-[#0b3b60] mt-1 font-mono">
             {metrics?.totalComplaints ?? '--'}
           </div>
-          <div className="text-[10px] text-slate-400 mt-1">All bureaus</div>
+          <div className="text-[10px] text-slate-400 mt-1">
+            {isAdmin ? 'All bureaus' : `${departmentCode || 'Bureau'} Active Queue`}
+          </div>
         </div>
 
         {/* Received */}
@@ -185,7 +205,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
           <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center space-x-2">
               <Building2 className="w-4 h-4 text-[#0b3b60]" />
-              <span>Departmental Workload & Distribution</span>
+              <span>{isAdmin ? 'Departmental Workload & Distribution' : `${departmentCode || 'Bureau'} Desk Workload & Disposal Summary`}</span>
             </h3>
             <span className="text-[11px] text-slate-400">Live Database Aggregation</span>
           </div>

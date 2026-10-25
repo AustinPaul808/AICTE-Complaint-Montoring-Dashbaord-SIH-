@@ -91,7 +91,7 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
   onRespond,
   onNavigateToOverlap,
 }) => {
-  const { user } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
 
   const [complaint, setComplaint] = useState<ComplaintWithRelations | null>(null);
   const [updates, setUpdates] = useState<ComplaintUpdateWithAuthor[]>([]);
@@ -280,7 +280,7 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
         </button>
 
         <div className="flex items-center space-x-2">
-          {onRespond && (
+          {onRespond && (isAdmin || complaint.assigned_department_id === profile?.department_id) && (
             <button
               type="button"
               onClick={() => onRespond(complaint.id)}
@@ -291,14 +291,21 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={() => setShowReassign(!showReassign)}
-            className="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded flex items-center space-x-1 shadow-sm"
-          >
-            <Share2 className="w-3.5 h-3.5 text-slate-500" />
-            <span>Reassign / Transfer Desk</span>
-          </button>
+          {/* Only Administrators have authority to reassign / reallocate case desks */}
+          {isAdmin ? (
+            <button
+              type="button"
+              onClick={() => setShowReassign(!showReassign)}
+              className="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded flex items-center space-x-1 shadow-sm"
+            >
+              <Share2 className="w-3.5 h-3.5 text-slate-500" />
+              <span>Reassign / Transfer Desk</span>
+            </button>
+          ) : (
+            <span className="text-[11px] text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded font-medium">
+              Reallocation: Administrator Only
+            </span>
+          )}
         </div>
       </div>
 

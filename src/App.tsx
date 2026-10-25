@@ -122,13 +122,17 @@ const AuthenticatedPortal: React.FC = () => {
         );
 
       case 'assignments':
-        return (
+        return isAdmin ? (
           <AssignmentManagement
             onSelectComplaint={(id) => {
               setSelectedComplaintId(id);
               setCurrentTab('complaint-detail');
             }}
           />
+        ) : (
+          <div className="bg-white border border-slate-200 rounded p-8 text-center text-xs text-slate-500">
+            Access restricted: Administrator privileges required to reallocate cases between bureaus. Bureau officers can only respond to cases within their own bureau.
+          </div>
         );
 
       case 'reports':

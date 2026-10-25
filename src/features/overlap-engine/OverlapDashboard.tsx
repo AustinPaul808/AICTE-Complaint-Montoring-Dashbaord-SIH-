@@ -25,7 +25,7 @@ interface OverlapDashboardProps {
 }
 
 export const OverlapDashboard: React.FC<OverlapDashboardProps> = ({ onSelectComplaint }) => {
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin, departmentCode } = useAuth();
 
   const [detectionResult, setDetectionResult] = useState<OverlapDetectionResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,9 +96,19 @@ export const OverlapDashboard: React.FC<OverlapDashboardProps> = ({ onSelectComp
     setTimeout(() => setActionNotice(null), 4000);
   };
 
-  const alerts = detectionResult?.alerts || [];
+  const rawAlerts = detectionResult?.alerts || [];
 
-  const filteredAlerts = alerts.filter((a) => {
+  // Non-administrators only see overlaps that concern their specific bureau
+  const bureauAlerts = isAdmin
+    ? rawAlerts
+    : rawAlerts.filter(
+        (a) =>
+          !departmentCode ||
+          a.cell_a.toUpperCase() === departmentCode.toUpperCase() ||
+          a.cell_b.toUpperCase() === departmentCode.toUpperCase()
+      );
+
+  const filteredAlerts = bureauAlerts.filter((a) => {
     if (selectedTier !== 'ALL' && a.tier !== selectedTier) return false;
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();

@@ -53,7 +53,7 @@ export const RespondComplaint: React.FC<RespondComplaintProps> = ({
   initialComplaintId,
   onViewCaseDossier,
 }) => {
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
 
   // Complaints list & selection
   const [complaints, setComplaints] = useState<ComplaintWithRelations[]>([]);
@@ -87,20 +87,33 @@ export const RespondComplaint: React.FC<RespondComplaintProps> = ({
     async function loadData() {
       setIsLoadingList(true);
       try {
-        const { data } = await getComplaints({ pageSize: 50 });
-        setComplaints(data);
+        const bureauDeptId = !isAdmin ? (profile?.department_id || undefined) : undefined;
+        const { data } = await getComplaints({ departmentId: bureauDeptId, pageSize: 50 });
+        
+        // Ensure non-admins only receive their bureau's cases
+        const allowedCases = isAdmin
+          ? data
+          : data.filter((c) => !bureauDeptId || c.assigned_department_id === bureauDeptId);
+
+        setComplaints(allowedCases);
 
         // Pre-select if initial ID passed
         if (initialComplaintId) {
-          const match = data.find((c) => c.id === initialComplaintId);
+          const match = allowedCases.find((c) => c.id === initialComplaintId);
           if (match) {
             handleSelectComplaint(match);
           } else {
             const single = await getComplaintById(initialComplaintId);
-            if (single) handleSelectComplaint(single);
+            if (single) {
+              if (isAdmin || single.assigned_department_id === bureauDeptId) {
+                handleSelectComplaint(single);
+              } else {
+                setErrorMessage('Access Restricted: This case is assigned to another Bureau. You can only respond to cases within your bureau.');
+              }
+            }
           }
-        } else if (data.length > 0) {
-          handleSelectComplaint(data[0]);
+        } else if (allowedCases.length > 0) {
+          handleSelectComplaint(allowedCases[0]);
         }
       } catch (err) {
         console.error('Error fetching complaints for response desk:', err);
@@ -109,7 +122,7 @@ export const RespondComplaint: React.FC<RespondComplaintProps> = ({
       }
     }
     loadData();
-  }, [initialComplaintId]);
+  }, [initialComplaintId, isAdmin, profile?.department_id]);
 
   const handleSelectComplaint = async (complaint: ComplaintWithRelations) => {
     setSelectedComplaint(complaint);
