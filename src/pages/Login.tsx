@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Mail, AlertCircle, CheckCircle2, ArrowRight, KeyRound, Building2, Zap } from 'lucide-react';
+import { Lock, Mail, AlertCircle, CheckCircle2, ArrowRight, KeyRound, Building2 } from 'lucide-react';
 
 interface LoginProps {
   onGoToPublicPortal?: () => void;
@@ -45,18 +45,6 @@ export const Login: React.FC<LoginProps> = ({ onGoToPublicPortal }) => {
           ? 'Invalid credentials. You can use the Quick Demo Sign-In button below.'
           : error?.message || 'Authentication error.'
       );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleInstantLogin = async (demoEmail: string) => {
-    setIsSubmitting(true);
-    setErrorMessage(null);
-    try {
-      await instantDemoLogin(demoEmail);
-    } catch (err) {
-      console.error(err);
     } finally {
       setIsSubmitting(false);
     }
@@ -217,33 +205,20 @@ export const Login: React.FC<LoginProps> = ({ onGoToPublicPortal }) => {
                   </>
                 )}
               </button>
-
-              <button
-                type="button"
-                onClick={() => handleInstantLogin(email)}
-                disabled={isSubmitting}
-                className="w-full py-2 px-4 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold rounded flex items-center justify-center space-x-1.5 transition-colors shadow-xs"
-              >
-                <Zap className="w-3.5 h-3.5 text-amber-700" />
-                <span>Instant Demo Access (Bypass Auth Check)</span>
-              </button>
             </div>
           </form>
 
           {/* Seed Demo Account Quick-Fill Switcher */}
           <div className="mt-5 pt-4 border-t border-slate-200">
             <div className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2 flex items-center justify-between">
-              <span>Select Role & Instant Login:</span>
-              <span className="text-[10px] font-normal text-slate-500">1-Click</span>
+              <span>Select Officer Profile (Auto-Fill):</span>
+              <span className="text-[10px] font-normal text-slate-500">Official Demo</span>
             </div>
             
             <div className="grid grid-cols-2 gap-2 text-xs">
               <button
                 type="button"
-                onClick={() => {
-                  handleQuickFill('admin@aicte.gov.in');
-                  handleInstantLogin('admin@aicte.gov.in');
-                }}
+                onClick={() => handleQuickFill('admin@aicte.gov.in')}
                 className="p-2 text-left border border-slate-200 hover:border-[#0b3b60] hover:bg-slate-50 rounded transition-all group"
               >
                 <div className="font-semibold text-slate-800 group-hover:text-[#0b3b60]">Administrator</div>
@@ -252,10 +227,7 @@ export const Login: React.FC<LoginProps> = ({ onGoToPublicPortal }) => {
 
               <button
                 type="button"
-                onClick={() => {
-                  handleQuickFill('rb.officer@aicte.gov.in');
-                  handleInstantLogin('rb.officer@aicte.gov.in');
-                }}
+                onClick={() => handleQuickFill('rb.officer@aicte.gov.in')}
                 className="p-2 text-left border border-slate-200 hover:border-[#0b3b60] hover:bg-slate-50 rounded transition-all group"
               >
                 <div className="font-semibold text-slate-800 group-hover:text-[#0b3b60]">RB Officer</div>
@@ -264,10 +236,7 @@ export const Login: React.FC<LoginProps> = ({ onGoToPublicPortal }) => {
 
               <button
                 type="button"
-                onClick={() => {
-                  handleQuickFill('pgrc.officer@aicte.gov.in');
-                  handleInstantLogin('pgrc.officer@aicte.gov.in');
-                }}
+                onClick={() => handleQuickFill('pgrc.officer@aicte.gov.in')}
                 className="p-2 text-left border border-slate-200 hover:border-[#0b3b60] hover:bg-slate-50 rounded transition-all group"
               >
                 <div className="font-semibold text-slate-800 group-hover:text-[#0b3b60]">PGRC Officer</div>
@@ -276,10 +245,7 @@ export const Login: React.FC<LoginProps> = ({ onGoToPublicPortal }) => {
 
               <button
                 type="button"
-                onClick={() => {
-                  handleQuickFill('reviewer@aicte.gov.in');
-                  handleInstantLogin('reviewer@aicte.gov.in');
-                }}
+                onClick={() => handleQuickFill('reviewer@aicte.gov.in')}
                 className="p-2 text-left border border-slate-200 hover:border-[#0b3b60] hover:bg-slate-50 rounded transition-all group"
               >
                 <div className="font-semibold text-slate-800 group-hover:text-[#0b3b60]">Reviewer</div>
