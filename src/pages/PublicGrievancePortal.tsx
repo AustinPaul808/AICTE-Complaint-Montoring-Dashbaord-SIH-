@@ -29,7 +29,9 @@ import {
   Clock,
   UserPlus,
   LogIn,
+  Mail,
 } from 'lucide-react';
+import { ContactModal } from '../components/common/ContactModal';
 
 const COMPLAINT_CATEGORIES = [
   'Fee Cap Violation',
@@ -73,6 +75,7 @@ export const PublicGrievancePortal: React.FC<PublicGrievancePortalProps> = ({
 
   // Public Notice Dismissible state
   const [showNotice, setShowNotice] = useState(true);
+  const [showContactModal, setShowContactModal] = useState(false);
 
   // Active Public User Session
   const [publicUser, setPublicUser] = useState<PublicUserSession | null>(() => {
@@ -361,6 +364,7 @@ export const PublicGrievancePortal: React.FC<PublicGrievancePortalProps> = ({
               </p>
             </div>
           </div>
+<<<<<<< HEAD
 
           <div className="flex items-center space-x-2">
             {onGoToExternalPortals && (
@@ -373,12 +377,27 @@ export const PublicGrievancePortal: React.FC<PublicGrievancePortalProps> = ({
                 <span>AICTE CSS Simulator</span>
               </button>
             )}
+=======
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setShowContactModal(true)}
+              className="text-xs text-white/90 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 rounded transition flex items-center space-x-1"
+            >
+              <Mail className="w-3.5 h-3.5" />
+              <span>Contact Desk</span>
+            </button>
+>>>>>>> f093d7b (Brevo Setup)
             <button
               type="button"
               onClick={onGoToLogin}
               className="text-xs text-white/90 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 rounded transition"
             >
+<<<<<<< HEAD
               AICTE Officer Portal &rarr;
+=======
+              Officer Login →
+>>>>>>> f093d7b (Brevo Setup)
             </button>
           </div>
         </div>
@@ -1057,7 +1076,19 @@ export const PublicGrievancePortal: React.FC<PublicGrievancePortalProps> = ({
         </div>
       )}
 
+<<<<<<< HEAD
       {/* Official Government Footer */}
+=======
+      {/* Brevo Contact Modal */}
+      <ContactModal
+        isOpen={showContactModal}
+        onClose={() => setShowContactModal(false)}
+        defaultEmail={currentCitizen?.email}
+        defaultName={currentCitizen?.fullName}
+      />
+
+      {/* Footer */}
+>>>>>>> f093d7b (Brevo Setup)
       <footer className="bg-slate-900 text-slate-400 text-xs py-4 border-t border-slate-800 mt-auto">
         <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between text-center sm:text-left space-y-2 sm:space-y-0">
           <div>

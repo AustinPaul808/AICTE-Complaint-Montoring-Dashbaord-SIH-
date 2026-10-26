@@ -626,6 +626,83 @@ export function getExternalStreamHistory(): ExternalStreamItem[] {
   }
 }
 
+export interface ExternalStreamItem {
+  id: string;
+  source: string;
+  externalReferenceId: string;
+  internalComplaintNumber: string;
+  institutionName: string;
+  category: string;
+  assignedCell: string;
+  submittedAt: string;
+}
+
+const EXTERNAL_STREAM_KEY = 'aicte_external_stream_history';
+
+export function getExternalStreamHistory(): ExternalStreamItem[] {
+  try {
+    const raw = localStorage.getItem(EXTERNAL_STREAM_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export interface IngestExternalComplaintInput {
+  source: string;
+  externalReferenceId: string;
+  institutionId: string;
+  title: string;
+  description: string;
+  category: string;
+  priority: ComplaintPriority;
+  complainantName: string;
+  complainantEmail: string;
+  complainantPhone?: string;
+  complainantType?: string;
+  studentRollNo?: string;
+}
+
+export async function ingestExternalComplaint(
+  input: IngestExternalComplaintInput
+): Promise<Database['public']['Tables']['complaints']['Row']> {
+  const pgrcDeptId = 'd0000000-0000-0000-0000-000000000002';
+
+  const complaint = await createComplaint({
+    institution_id: input.institutionId,
+    title: input.title,
+    description: `[EXTERNAL INTAKE: ${input.source}] (Ref: ${input.externalReferenceId})\n\n${input.description}`,
+    category: input.category,
+    priority: input.priority,
+    assigned_department_id: pgrcDeptId,
+    complainant_name: input.complainantName,
+    complainant_email: input.complainantEmail,
+    complainant_phone: input.complainantPhone || null,
+    complainant_type: input.complainantType || 'Public',
+    student_roll_no: input.studentRollNo || null,
+  });
+
+  try {
+    const history = getExternalStreamHistory();
+    const item: ExternalStreamItem = {
+      id: complaint.id,
+      source: input.source,
+      externalReferenceId: input.externalReferenceId,
+      internalComplaintNumber: complaint.complaint_number,
+      institutionName: input.title,
+      category: input.category,
+      assignedCell: 'PGRC',
+      submittedAt: new Date().toISOString(),
+    };
+    history.unshift(item);
+    localStorage.setItem(EXTERNAL_STREAM_KEY, JSON.stringify(history.slice(0, 50)));
+  } catch {
+    // ignore
+  }
+
+  return complaint;
+}
+
 export async function updateComplaintStatus(
   id: string,
   newStatus: ComplaintStatus
