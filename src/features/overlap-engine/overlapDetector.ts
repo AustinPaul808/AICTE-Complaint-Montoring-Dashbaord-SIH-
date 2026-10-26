@@ -19,6 +19,7 @@ export interface OverlapAlert {
   institution_name: string;
   confidence: number;
   confidence_pct: number;
+  tier: 'HIGH' | 'MEDIUM' | 'LOW';
   reason: string;
   signals: {
     institution_confidence: number;
@@ -34,7 +35,9 @@ export interface OverlapStats {
   cases_received: number;
   institutions_count: number;
   alerts_count: number;
-  average_confidence_pct: number;
+  high_count: number;
+  medium_count: number;
+  low_count: number;
   suppressed_count: number;
   runtime_ms: number;
 }
@@ -195,6 +198,9 @@ export function detectOverlaps(
           continue;
         }
 
+        const tier: 'HIGH' | 'MEDIUM' | 'LOW' =
+          confidence >= 0.70 ? 'HIGH' : confidence >= 0.50 ? 'MEDIUM' : 'LOW';
+
         // Order earlier case first
         const [earlier, later] = timeA <= timeB ? [a, b] : [b, a];
         const [earlierCell, laterCell] = timeA <= timeB ? [cellA, cellB] : [cellB, cellA];
@@ -228,6 +234,7 @@ export function detectOverlaps(
           institution_name: instName,
           confidence: Math.round(confidence * 1000) / 1000,
           confidence_pct: Math.round(confidence * 100),
+          tier,
           reason,
           signals: {
             institution_confidence: instConfidence,
@@ -244,7 +251,7 @@ export function detectOverlaps(
     }
   }
 
-  // Sort by confidence score, highest first.
+  // Sort alerts: HIGH first, then descending by confidence
   alerts.sort((x, y) => y.confidence - x.confidence);
 
   const t1 = performance.now();
@@ -253,9 +260,9 @@ export function detectOverlaps(
     cases_received: complaints.length,
     institutions_count: institutionGroups.size,
     alerts_count: alerts.length,
-    average_confidence_pct: alerts.length
-      ? Math.round(alerts.reduce((total, alert) => total + alert.confidence_pct, 0) / alerts.length)
-      : 0,
+    high_count: alerts.filter((a) => a.tier === 'HIGH').length,
+    medium_count: alerts.filter((a) => a.tier === 'MEDIUM').length,
+    low_count: alerts.filter((a) => a.tier === 'LOW').length,
     suppressed_count: suppressed.length,
     runtime_ms: Math.round((t1 - t0) * 100) / 100,
   };

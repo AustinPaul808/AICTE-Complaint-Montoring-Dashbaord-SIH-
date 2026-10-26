@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Login } from './pages/Login';
 import { PublicGrievancePortal } from './pages/PublicGrievancePortal';
+import { RegistrationAndLogin } from './pages/RegistrationAndLogin';
+import { ExternalIntakePortals } from './pages/ExternalIntakePortals';
 import { Header } from './components/common/Header';
 import { Sidebar } from './components/common/Sidebar';
 import { Dashboard } from './features/dashboard/Dashboard';
@@ -20,7 +22,8 @@ const AuthenticatedPortal: React.FC = () => {
   const { user, isAdmin, isLoading } = useAuth();
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [selectedComplaintId, setSelectedComplaintId] = useState<string | null>(null);
-  const [publicView, setPublicView] = useState<'portal' | 'login'>('portal');
+  const [publicView, setPublicView] = useState<'register' | 'portal' | 'login' | 'external_portals'>('register');
+  const [regInitialTab, setRegInitialTab] = useState<'register' | 'login'>('register');
 
   if (isLoading) {
     return (
@@ -38,10 +41,50 @@ const AuthenticatedPortal: React.FC = () => {
   }
 
   if (!user) {
-    if (publicView === 'portal') {
-      return <PublicGrievancePortal onGoToLogin={() => setPublicView('login')} />;
+    if (publicView === 'external_portals') {
+      return (
+        <ExternalIntakePortals
+          onNavigateToDashboard={() => setPublicView('login')}
+          onNavigateToCase={(_id) => setPublicView('portal')}
+          onNavigateToOverlap={() => setPublicView('login')}
+          onGoBack={() => setPublicView('register')}
+        />
+      );
     }
-    return <Login onGoToPublicPortal={() => setPublicView('portal')} />;
+
+    if (publicView === 'register') {
+      return (
+        <RegistrationAndLogin
+          initialTab={regInitialTab}
+          onAuthenticated={(_session) => setPublicView('portal')}
+          onGoToOfficerLogin={() => setPublicView('login')}
+          onGoToExternalPortals={() => setPublicView('external_portals')}
+        />
+      );
+    }
+
+    if (publicView === 'portal') {
+      return (
+        <PublicGrievancePortal
+          onGoToLogin={() => setPublicView('login')}
+          onGoToRegister={(tab) => {
+            setRegInitialTab(tab || 'register');
+            setPublicView('register');
+          }}
+          onGoToExternalPortals={() => setPublicView('external_portals')}
+        />
+      );
+    }
+
+    return (
+      <Login
+        onGoToPublicPortal={() => {
+          setRegInitialTab('register');
+          setPublicView('register');
+        }}
+        onGoToExternalPortals={() => setPublicView('external_portals')}
+      />
+    );
   }
 
   const renderActiveView = () => {
@@ -75,6 +118,19 @@ const AuthenticatedPortal: React.FC = () => {
               setSelectedComplaintId(id);
               setCurrentTab('complaint-detail');
             }}
+          />
+        );
+
+      case 'external-portals':
+        return (
+          <ExternalIntakePortals
+            onNavigateToDashboard={() => setCurrentTab('dashboard')}
+            onNavigateToCase={(id) => {
+              setSelectedComplaintId(id);
+              setCurrentTab('complaint-detail');
+            }}
+            onNavigateToOverlap={() => setCurrentTab('overlap')}
+            onGoBack={() => setCurrentTab('dashboard')}
           />
         );
 

@@ -2,24 +2,27 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getComplaints, type ComplaintFilterOptions } from '../../services/supabase/complaints';
 import { getDepartments, type Department } from '../../services/supabase/departments';
-import type { ComplaintWithRelations, ComplaintStatus } from '../../types/database.types';
+import type { ComplaintWithRelations, ComplaintStatus, ComplaintPriority } from '../../types/database.types';
 import {
   Search,
+  Filter,
   ArrowUpDown,
   Building2,
   Calendar,
   AlertTriangle,
   ChevronRight,
-  RefreshCw,
+  PlusCircle,
+  RefreshCw
 } from 'lucide-react';
 
 interface ComplaintListProps {
   onSelectComplaint: (complaintId: string) => void;
-  onNewComplaint?: () => void;
+  onNewComplaint: () => void;
 }
 
 export const ComplaintList: React.FC<ComplaintListProps> = ({
   onSelectComplaint,
+  onNewComplaint,
 }) => {
   const { profile, isAdmin, departmentCode } = useAuth();
   const [complaints, setComplaints] = useState<ComplaintWithRelations[]>([]);
@@ -27,13 +30,14 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
   const [totalCount, setTotalCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Filters (Urgency levels removed)
+  // Filters
   const [search, setSearch] = useState('');
   const [departmentId, setDepartmentId] = useState<string>(
     isAdmin ? 'ALL' : (profile?.department_id || 'ALL')
   );
   const [status, setStatus] = useState<ComplaintStatus | 'ALL'>('ALL');
-  const [sortBy, setSortBy] = useState<'recent' | 'due_date'>('recent');
+  const [priority, setPriority] = useState<ComplaintPriority | 'ALL'>('ALL');
+  const [sortBy, setSortBy] = useState<'recent' | 'due_date' | 'priority'>('recent');
 
   // Enforce bureau isolation for non-administrators
   useEffect(() => {
@@ -53,6 +57,7 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
         search: search.trim() || undefined,
         departmentId: effectiveDeptId,
         status: status !== 'ALL' ? status : undefined,
+        priority: priority !== 'ALL' ? priority : undefined,
         sortBy,
       };
 
@@ -64,7 +69,7 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [search, departmentId, status, sortBy, isAdmin, profile?.department_id]);
+  }, [search, departmentId, status, priority, sortBy, isAdmin, profile?.department_id]);
 
   useEffect(() => {
     getDepartments().then(setDepartments).catch(console.error);
@@ -96,6 +101,19 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
     }
   };
 
+  const getPriorityBadge = (p: ComplaintPriority) => {
+    switch (p) {
+      case 'Urgent':
+        return <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-300">URGENT</span>;
+      case 'High':
+        return <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-300">HIGH</span>;
+      case 'Normal':
+        return <span className="px-1.5 py-0.5 rounded text-[10px] text-slate-600 bg-slate-100 border border-slate-200">NORMAL</span>;
+      default:
+        return null;
+    }
+  };
+
   const isOverdue = (c: ComplaintWithRelations) => {
     if (!c.due_at || ['Resolved', 'Closed'].includes(c.status)) return false;
     return new Date(c.due_at) < new Date();
@@ -103,7 +121,7 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Top Action Bar (Register New Grievance removed from officer side) */}
+      {/* Top Action Bar */}
       <div className="bg-white border border-slate-200 rounded p-4 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-bold text-slate-900 flex items-center space-x-2">
@@ -123,11 +141,18 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
           <button
             type="button"
             onClick={fetchComplaints}
-            className="p-2 border border-slate-200 hover:bg-slate-50 rounded text-slate-600 transition flex items-center space-x-1 text-xs"
+            className="p-2 border border-slate-200 hover:bg-slate-50 rounded text-slate-600"
             title="Refresh database records"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh Registry</span>
+          </button>
+          <button
+            type="button"
+            onClick={onNewComplaint}
+            className="px-3.5 py-2 bg-[#0b3b60] hover:bg-[#072a45] text-white text-xs font-semibold rounded flex items-center space-x-1.5 shadow-sm transition-colors"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Register New Grievance</span>
           </button>
         </div>
       </div>
@@ -193,29 +218,50 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
           </div>
         </div>
 
-        {/* Secondary Bar: Sorting (Urgency levels removed) */}
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-end text-xs text-slate-600 gap-2">
+        {/* Secondary Filters: Priority & Sorting */}
+        <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-600 gap-2">
+          <div className="flex items-center space-x-3">
+            <span className="flex items-center space-x-1 font-semibold text-slate-700">
+              <Filter className="w-3.5 h-3.5 text-slate-500" />
+              <span>Priority:</span>
+            </span>
+            {(['ALL', 'Normal', 'High', 'Urgent'] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPriority(p)}
+                className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
+                  priority === p
+                    ? 'bg-[#0b3b60] text-white font-medium'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+
           <div className="flex items-center space-x-2">
             <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />
             <span className="font-semibold text-slate-700">Sort By:</span>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'recent' | 'due_date')}
+              onChange={(e) => setSortBy(e.target.value as 'recent' | 'due_date' | 'priority')}
               className="py-1 px-2 border border-slate-300 rounded text-xs bg-white text-slate-800"
             >
               <option value="recent">Most Recent Intake</option>
               <option value="due_date">Target Deadline (Earliest)</option>
+              <option value="priority">Priority (Urgent First)</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Complaints Data Table (Priority Column Removed) */}
+      {/* Complaints Data Table */}
       <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="py-16 text-center text-xs text-slate-500">
             <div className="w-6 h-6 border-2 border-[#0b3b60] border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-            Loading complaints registry from database...
+            Loading complaints registry from Supabase...
           </div>
         ) : complaints.length === 0 ? (
           <div className="py-16 text-center text-xs text-slate-500">
@@ -229,9 +275,10 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
               <thead>
                 <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 font-semibold uppercase tracking-wider text-[11px]">
                   <th className="py-3 px-4">Case Number</th>
-                  <th className="py-3 px-4">Institution &amp; Details</th>
+                  <th className="py-3 px-4">Institution & Details</th>
                   <th className="py-3 px-4">Grievance Subject</th>
                   <th className="py-3 px-4">Assigned Bureau</th>
+                  <th className="py-3 px-4 text-center">Priority</th>
                   <th className="py-3 px-4 text-center">Status</th>
                   <th className="py-3 px-4">Resolution Target</th>
                   <th className="py-3 px-4 text-right">Action</th>
@@ -263,8 +310,18 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
 
                       {/* Title & Category */}
                       <td className="py-3 px-4 max-w-[260px]">
-                        <div className="font-medium text-slate-900 line-clamp-1">
-                          {c.title}
+                        <div className="font-medium text-slate-900 line-clamp-1 flex items-center">
+                          {c.title.includes('[CPGRAMS:') && (
+                            <span className="mr-1.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-orange-100 text-orange-900 border border-orange-300 uppercase shrink-0">
+                              CPGRAMS
+                            </span>
+                          )}
+                          {c.title.includes('[CSS:') && (
+                            <span className="mr-1.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-100 text-blue-900 border border-blue-300 uppercase shrink-0">
+                              AICTE CSS
+                            </span>
+                          )}
+                          <span className="truncate">{c.title.replace(/^\[(CPGRAMS|CSS):[^\]]+\]\s*/, '')}</span>
                         </div>
                         <div className="text-[10px] text-slate-500 mt-0.5 truncate">
                           {c.category}
@@ -279,6 +336,11 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
                         <div className="text-[10px] text-slate-500 truncate max-w-[140px]">
                           {c.assigned_officer?.full_name || 'Unassigned Desk'}
                         </div>
+                      </td>
+
+                      {/* Priority */}
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        {getPriorityBadge(c.priority)}
                       </td>
 
                       {/* Status */}
@@ -302,14 +364,14 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
                             )}
                           </div>
                         ) : (
-                          <span className="text-slate-400 text-[11px]">No deadline</span>
+                          <span className="text-slate-400 text-[10px]">No deadline</span>
                         )}
                       </td>
 
-                      {/* Action Chevron */}
+                      {/* Action */}
                       <td className="py-3 px-4 text-right whitespace-nowrap">
-                        <span className="inline-flex items-center text-[#0b3b60] hover:text-[#072a45] font-semibold text-[11px] group-hover:underline">
-                          <span>Inspect</span>
+                        <span className="inline-flex items-center text-[#0b3b60] hover:text-[#072a45] font-semibold text-xs">
+                          <span>Dossier</span>
                           <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
                         </span>
                       </td>

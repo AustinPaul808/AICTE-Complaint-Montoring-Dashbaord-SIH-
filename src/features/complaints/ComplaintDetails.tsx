@@ -35,7 +35,6 @@ import {
   Sparkles,
   ArrowRight
 } from 'lucide-react';
-import { AIRecommendationPanel } from './AIRecommendationPanel';
 
 interface ComplaintDetailsProps {
   complaintId: string;
@@ -52,8 +51,6 @@ const ALL_STATUSES: ComplaintStatus[] = [
   'Resolved',
   'Closed',
 ];
-
-const ON_HOLD_REASON_PREFIX = '[ON HOLD REASON] ';
 
 const formatActionParticulars = (details: unknown): string => {
   if (!details) return '—';
@@ -106,7 +103,6 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
 
   const [isLoading, setIsLoading] = useState(true);
   const [newStatus, setNewStatus] = useState<ComplaintStatus>('Received');
-  const [onHoldReason, setOnHoldReason] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Investigation Note Form
@@ -135,10 +131,6 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
 
       setComplaint(comp);
       setUpdates(notesList);
-      const latestHoldReason = [...notesList]
-        .reverse()
-        .find((note) => note.update_text.startsWith(ON_HOLD_REASON_PREFIX));
-      setOnHoldReason(latestHoldReason?.update_text.slice(ON_HOLD_REASON_PREFIX.length) || '');
       setAssignments(assignList);
       setAuditLogs(auditList);
       setDepartments(deptList);
@@ -185,33 +177,11 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
     e.preventDefault();
     if (!complaint || newStatus === complaint.status) return;
 
-    if (newStatus === 'On Hold' && !onHoldReason.trim()) {
-      setFeedbackMessage({ text: 'Please provide a reason for placing this complaint on hold.', type: 'error' });
-      return;
-    }
-    if (newStatus === 'On Hold' && !user) {
-      setFeedbackMessage({ text: 'Unable to record the hold reason because the signed-in officer could not be identified.', type: 'error' });
-      return;
-    }
-
     setIsUpdatingStatus(true);
     setFeedbackMessage(null);
 
     try {
       await updateComplaintStatus(complaintId, newStatus);
-      if (newStatus === 'On Hold' && user) {
-        try {
-          await addComplaintUpdate(complaintId, user.id, `${ON_HOLD_REASON_PREFIX}${onHoldReason.trim()}`);
-        } catch (err: unknown) {
-          const error = err as { message?: string };
-          await loadComplaintData();
-          setFeedbackMessage({
-            text: `Status changed to On Hold, but the reason could not be saved: ${error?.message || 'Unknown error'}`,
-            type: 'error',
-          });
-          return;
-        }
-      }
       setFeedbackMessage({ text: `Status updated to "${newStatus}". System audit log registered.`, type: 'success' });
       await loadComplaintData();
     } catch (err: unknown) {
@@ -295,6 +265,13 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
   }
 
   const isOverdue = complaint.due_at && !['Resolved', 'Closed'].includes(complaint.status) && new Date(complaint.due_at) < new Date();
+
+  // Parse external intake portal source if complaint arrived via CPGRAMS or CSS
+  const externalMatch = complaint.title?.match(/^\[(CPGRAMS|CSS):\s*([^\]]+)\]\s*(.*)$/);
+  const isExternal = Boolean(externalMatch);
+  const externalSource = externalMatch ? externalMatch[1] : null;
+  const externalRef = externalMatch ? externalMatch[2] : null;
+  const displayTitle = externalMatch ? externalMatch[3] : complaint.title;
 
   return (
     <div className="space-y-5">
@@ -424,7 +401,7 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
               <div className="font-bold text-amber-950 flex flex-wrap items-center gap-2">
                 <span className="text-sm">Potential Cross-Bureau Overlap Detected</span>
                 <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-amber-200 text-amber-900 uppercase">
-                  Match Score: {overlapAlert.confidence_pct}%
+                  {overlapAlert.tier} CONFIDENCE ({overlapAlert.confidence_pct}%)
                 </span>
                 <span className="text-slate-600 font-mono text-[11px]">
                   Matching Case: {overlapAlert.case_a_id === complaint.complaint_number ? overlapAlert.case_b_id : overlapAlert.case_a_id} ({overlapAlert.case_a_id === complaint.complaint_number ? overlapAlert.cell_b : overlapAlert.cell_a} Desk)
@@ -453,54 +430,85 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
       <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-200 bg-slate-50/70">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-base font-extrabold text-[#0b3b60] bg-white px-3 py-1 rounded border border-slate-300 shadow-sm">
                 {complaint.complaint_number}
               </span>
+              <span className={`px-2.5 py-0.5 rounded text-xs font-bold border ${
+                complaint.priority === 'Urgent'
+                  ? 'bg-red-100 text-red-800 border-red-300'
+                  : complaint.priority === 'High'
+                  ? 'bg-amber-100 text-amber-900 border-amber-300'
+                  : 'bg-slate-100 text-slate-700 border-slate-300'
+              }`}>
+                {complaint.priority.toUpperCase()} PRIORITY
+              </span>
+              {externalSource === 'CPGRAMS' && (
+                <span className="px-2.5 py-0.5 rounded text-xs font-bold bg-amber-500 text-white flex items-center space-x-1 shadow-sm">
+                  <span>🇮🇳 CPGRAMS ({externalRef})</span>
+                </span>
+              )}
+              {externalSource === 'CSS' && (
+                <span className="px-2.5 py-0.5 rounded text-xs font-bold bg-purple-700 text-white flex items-center space-x-1 shadow-sm">
+                  <span>🏛️ AICTE CSS ({externalRef})</span>
+                </span>
+              )}
             </div>
 
             {/* Quick Status Workflow Selector */}
-            <form onSubmit={handleStatusChange} className="flex flex-col items-stretch gap-2">
-              <div className="flex items-center justify-end space-x-2">
-                <label className="text-xs font-semibold text-slate-600 shrink-0">Workflow Status:</label>
-                <select
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value as ComplaintStatus)}
-                  className="text-xs border border-slate-300 rounded px-2.5 py-1.5 bg-white font-semibold text-slate-800 focus:ring-2 focus:ring-[#0b3b60]"
-                >
-                  {ALL_STATUSES.map((st) => (
-                    <option key={st} value={st}>
-                      {st}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="submit"
-                  disabled={isUpdatingStatus || newStatus === complaint.status}
-                  className="px-3 py-1.5 bg-[#0b3b60] text-white text-xs font-semibold rounded hover:bg-[#072a45] disabled:opacity-40"
-                >
-                  {isUpdatingStatus ? 'Saving...' : 'Update'}
-                </button>
-              </div>
-              {newStatus === 'On Hold' && newStatus !== complaint.status && (
-                <label className="text-xs text-slate-600">
-                  Reason for placing this complaint on hold <span className="text-red-500">*</span>
-                  <textarea
-                    value={onHoldReason}
-                    onChange={(e) => setOnHoldReason(e.target.value)}
-                    required
-                    rows={2}
-                    placeholder="Enter the reason for placing this complaint on hold..."
-                    className="mt-1 w-full min-w-64 text-xs border border-slate-300 rounded px-2.5 py-1.5 bg-white text-slate-800 focus:ring-2 focus:ring-[#0b3b60]"
-                  />
-                </label>
-              )}
+            <form onSubmit={handleStatusChange} className="flex items-center space-x-2">
+              <label className="text-xs font-semibold text-slate-600 shrink-0">Workflow Status:</label>
+              <select
+                value={newStatus}
+                onChange={(e) => setNewStatus(e.target.value as ComplaintStatus)}
+                className="text-xs border border-slate-300 rounded px-2.5 py-1.5 bg-white font-semibold text-slate-800 focus:ring-2 focus:ring-[#0b3b60]"
+              >
+                {ALL_STATUSES.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                disabled={isUpdatingStatus || newStatus === complaint.status}
+                className="px-3 py-1.5 bg-[#0b3b60] text-white text-xs font-semibold rounded hover:bg-[#072a45] disabled:opacity-40"
+              >
+                {isUpdatingStatus ? 'Saving...' : 'Update'}
+              </button>
             </form>
           </div>
 
           <h1 className="text-lg font-bold text-slate-900 mt-2">
-            {complaint.title}
+            {displayTitle}
           </h1>
+
+          {/* External Intake Callout Card */}
+          {isExternal && (
+            <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
+              <div className="flex items-center space-x-2.5">
+                <span className="p-1.5 bg-[#0b3b60] text-white rounded font-bold text-[10px] uppercase tracking-wider">
+                  External Intake
+                </span>
+                <div>
+                  <div className="font-bold text-slate-900 flex items-center space-x-1.5">
+                    <span>Origin:</span>
+                    <span className="text-[#0b3b60]">
+                      {externalSource === 'CPGRAMS'
+                        ? 'Centralized Public Grievance Redress And Monitoring System (DARPG, Govt. of India)'
+                        : 'AICTE Centralized Support System (CSS Portal)'}
+                    </span>
+                  </div>
+                  <div className="text-slate-600 font-mono text-[11px] mt-0.5">
+                    Official Reference Docket: <strong className="text-slate-900">{externalRef}</strong> &bull; Auto-routed to Public Grievance Redressal Cell (PGRC) Desk
+                  </div>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-[10px] rounded shrink-0 self-start sm:self-auto">
+                ● LIVE SYNCED
+              </span>
+            </div>
+          )}
           <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
             <span>Category: <strong className="text-slate-700">{complaint.category}</strong></span>
             <span>•</span>
@@ -586,14 +594,6 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
                 {complaint.due_at ? new Date(complaint.due_at).toLocaleDateString() : 'Open Timeline'}
               </span>
             </div>
-            {complaint.status === 'On Hold' && (
-              <div>
-                <span className="text-slate-500">On Hold Reason:</span>{' '}
-                <span className="font-semibold text-amber-800">
-                  {onHoldReason || 'No hold reason recorded.'}
-                </span>
-              </div>
-            )}
             {complaint.resolved_at && (
               <div className="text-emerald-700 font-semibold">
                 Resolved on: {new Date(complaint.resolved_at).toLocaleDateString()}
@@ -605,31 +605,13 @@ export const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({
         {/* Full Allegation Description */}
         <div className="p-6 border-t border-slate-200">
           <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2">
-            Grievance Particulars &amp; Allegation Description
+            Grievance Particulars & Allegation Description
           </h4>
           <div className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-4 rounded border border-slate-200 whitespace-pre-wrap font-sans">
             {complaint.description}
           </div>
         </div>
       </div>
-
-      {/* AI Investigation Recommendation Panel */}
-      <AIRecommendationPanel
-        ctx={{
-          complaint_number: complaint.complaint_number,
-          title: complaint.title,
-          description: complaint.description,
-          category: complaint.category,
-          priority: complaint.priority,
-          status: complaint.status,
-          bureau: complaint.department?.code || complaint.department?.name || 'PGRC',
-          institution_name: complaint.institution?.institution_name || 'Unknown Institution',
-          institution_state: complaint.institution?.state || '',
-          complainant_type: (complaint as Record<string, unknown>).complainant_type as string | null | undefined,
-          received_at: complaint.received_at,
-          due_at: complaint.due_at,
-        }}
-      />
 
       {/* Tabs: Investigation Notes | Assignment History | Audit Trail */}
       <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden">

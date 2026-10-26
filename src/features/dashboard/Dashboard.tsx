@@ -8,7 +8,8 @@ import {
   ArrowRight,
   RefreshCw,
   MessageSquareReply,
-  Sparkles
+  Sparkles,
+  Globe
 } from 'lucide-react';
 
 // Helper to format JSON metadata into clean, human-readable text
@@ -108,6 +109,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
           <button
+            onClick={() => onNavigateTab('external-portals')}
+            className="px-3.5 py-1.5 bg-[#e26a00] hover:bg-[#c2410c] text-white text-xs font-bold rounded shadow-sm transition-colors flex items-center space-x-1.5"
+            title="Lodge external grievances on CPGRAMS or CSS to see live synchronization"
+          >
+            <span>🇮🇳 CPGRAMS / CSS Simulator</span>
+          </button>
+          <button
             onClick={() => onNavigateTab('overlap')}
             className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded shadow-sm transition-colors flex items-center space-x-1.5"
           >
@@ -122,6 +130,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
             <span>Respond to Grievance</span>
           </button>
         </div>
+      </div>
+
+      {/* External Portals Realtime Ingestion Banner */}
+      <div className="bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 border-2 border-orange-300 rounded p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-[#e26a00] text-white rounded shrink-0">
+            <Globe className="w-5 h-5 text-white" />
+          </div>
+          <div className="text-xs">
+            <div className="font-bold text-orange-950 flex flex-wrap items-center gap-2">
+              <span>External Intake Portals Connected: CPGRAMS (GoI) &amp; AICTE CSS</span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-200 text-orange-900 uppercase">
+                Live Data Pipeline Active
+              </span>
+            </div>
+            <p className="text-orange-900 mt-0.5 leading-relaxed">
+              Grievances lodged on the official <strong>CPGRAMS portal (pgportal.gov.in)</strong> or <strong>AICTE Centralized Support System (CSS)</strong> directly reflect in this dashboard in real-time, routing to PGRC and triggering cross-bureau overlap detection.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => onNavigateTab('external-portals')}
+          className="px-4 py-2 bg-[#e26a00] hover:bg-[#c2410c] text-white text-xs font-bold rounded shadow-xs shrink-0 flex items-center space-x-1 transition"
+        >
+          <span>Open External Simulator &rarr;</span>
+        </button>
       </div>
 
       {/* KPI Cards Grid */}

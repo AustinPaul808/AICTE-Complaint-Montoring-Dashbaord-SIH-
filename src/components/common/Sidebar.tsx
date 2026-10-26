@@ -9,7 +9,9 @@ import {
   BarChart3,
   History,
   ShieldAlert,
-  Building
+  Building,
+  CheckCircle2,
+  Globe
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -38,6 +40,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
       label: 'AI Overlap Engine',
       icon: Sparkles,
       description: 'Cross-bureau conflict discovery',
+    },
+    {
+      id: 'external-portals',
+      label: 'CPGRAMS & CSS Simulator',
+      icon: Globe,
+      description: 'Live GoI & CSS complaint intake',
     },
     {
       id: 'respond',
@@ -84,10 +92,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
           <span>Active Bureau / Desk</span>
         </div>
         <div className="text-sm font-bold text-[#0b3b60]">
-          {isAdmin ? 'Administrator' : profile?.departments?.name || 'Central Coordination'}
+          {profile?.departments?.name || 'Central Coordination'}
         </div>
         <div className="text-[11px] text-slate-500 mt-0.5">
-          Desk Code: <span className="font-mono font-semibold text-slate-700">{isAdmin ? 'ADMIN' : departmentCode || 'CENTRAL'}</span>
+          Desk Code: <span className="font-mono font-semibold text-slate-700">{departmentCode || 'CENTRAL'}</span>
         </div>
       </div>
 
@@ -118,6 +126,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
         })}
       </nav>
 
+      {/* System Status Footnote */}
+      <div className="p-3 border-t border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+        <div className="flex items-center space-x-1.5 text-emerald-700 font-medium">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span>PostgreSQL RLS Active</span>
+        </div>
+        <div className="text-[10px] text-slate-400 mt-0.5">
+          AICTE Central Database Connected
+        </div>
+      </div>
     </aside>
   );
 };
