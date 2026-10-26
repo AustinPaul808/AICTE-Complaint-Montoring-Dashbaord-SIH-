@@ -95,10 +95,7 @@ export const ExternalIntakePortals: React.FC<ExternalIntakePortalsProps> = ({
 
   // Institution List
   const [institutions, setInstitutions] = useState<Institution[]>([]);
-<<<<<<< HEAD
   const [, setIsLoadingInstitutions] = useState(true);
-=======
->>>>>>> f093d7b (Brevo Setup)
 
   // Form Fields - CPGRAMS
   const [selectedInstId, setSelectedInstId] = useState('');
@@ -150,6 +147,8 @@ export const ExternalIntakePortals: React.FC<ExternalIntakePortalsProps> = ({
         setStreamHistory(getExternalStreamHistory());
       } catch (err) {
         console.error('Error loading data:', err);
+      } finally {
+        setIsLoadingInstitutions(false);
       }
     }
     loadData();
