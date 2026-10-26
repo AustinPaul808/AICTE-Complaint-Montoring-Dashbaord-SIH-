@@ -25,6 +25,24 @@ const AuthenticatedPortal: React.FC = () => {
   const [publicView, setPublicView] = useState<'register' | 'portal' | 'login' | 'external_portals'>('register');
   const [regInitialTab, setRegInitialTab] = useState<'register' | 'login'>('register');
 
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (
+        params.get('portal') === 'css' ||
+        params.get('simulator') === 'css' ||
+        params.get('simulator') === 'true' ||
+        params.get('portal') === 'simulator'
+      ) {
+        if (!user) {
+          setPublicView('external_portals');
+        } else {
+          setCurrentTab('external-portals');
+        }
+      }
+    }
+  }, [user]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center font-sans">
@@ -124,13 +142,13 @@ const AuthenticatedPortal: React.FC = () => {
       case 'external-portals':
         return (
           <ExternalIntakePortals
-            onNavigateToDashboard={() => setCurrentTab('dashboard')}
+            onNavigateToDashboard={() => setCurrentTab('complaints')}
             onNavigateToCase={(id) => {
               setSelectedComplaintId(id);
               setCurrentTab('complaint-detail');
             }}
             onNavigateToOverlap={() => setCurrentTab('overlap')}
-            onGoBack={() => setCurrentTab('dashboard')}
+            onGoBack={() => setCurrentTab('complaints')}
           />
         );
 

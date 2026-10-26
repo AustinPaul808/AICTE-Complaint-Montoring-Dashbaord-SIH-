@@ -47,8 +47,8 @@ export const ExternalIntakePortals: React.FC<ExternalIntakePortalsProps> = ({
   onNavigateToOverlap,
   onGoBack,
 }) => {
-  // Navigation between CPGRAMS, CSS, and Ingested Stream
-  const [activePortal, setActivePortal] = useState<'cpgrams' | 'css' | 'stream'>('cpgrams');
+  // Navigation between CSS and Ingested Stream
+  const [activePortal, setActivePortal] = useState<'cpgrams' | 'css' | 'stream'>('css');
 
   // CPGRAMS Sub-Views: 'home' | 'lodge_public' | 'lodge_pension' | 'status' | 'reminder' | 'appeal'
   const [cpgramsView, setCpgramsView] = useState<'home' | 'lodge_public' | 'status'>('home');
@@ -459,22 +459,6 @@ export const ExternalIntakePortals: React.FC<ExternalIntakePortalsProps> = ({
             <button
               type="button"
               onClick={() => {
-                setActivePortal('cpgrams');
-                setSubmissionSuccess(null);
-              }}
-              className={`py-3.5 px-3 sm:px-5 text-xs font-bold flex items-center space-x-2 border-b-2 transition ${
-                activePortal === 'cpgrams'
-                  ? 'border-[#e67e22] text-[#0b3b60] bg-orange-50/40'
-                  : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <span className="text-base">🇮🇳</span>
-              <span>CPGRAMS Portal (Govt of India - pgportal.gov.in)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
                 setActivePortal('css');
                 setSubmissionSuccess(null);
               }}
@@ -485,7 +469,7 @@ export const ExternalIntakePortals: React.FC<ExternalIntakePortalsProps> = ({
               }`}
             >
               <Building2 className="w-4 h-4 text-[#0b3b60]" />
-              <span>AICTE CSS Portal (Centralized Support System)</span>
+              <span>AICTE CSS Simulator (Centralized Support System)</span>
             </button>
 
             <button
@@ -663,7 +647,7 @@ export const ExternalIntakePortals: React.FC<ExternalIntakePortalsProps> = ({
                         onClick={onNavigateToDashboard}
                         className="px-5 py-2 bg-[#0b3b60] hover:bg-[#072a45] text-white text-xs font-bold rounded shadow-sm flex items-center space-x-1.5 transition"
                       >
-                        <span>Open AICTE Integrated Dashboard</span>
+                        <span>View in All Complaints on AICTE Dash</span>
                         <ChevronRight className="w-4 h-4 text-amber-300" />
                       </button>
                     )}

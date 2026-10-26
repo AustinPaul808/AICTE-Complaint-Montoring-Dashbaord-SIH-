@@ -244,10 +244,10 @@ export const RegistrationAndLogin: React.FC<RegistrationAndLoginProps> = ({
               <button
                 type="button"
                 onClick={onGoToExternalPortals}
-                className="text-xs bg-[#e26a00] hover:bg-[#c2410c] text-white font-bold px-3 py-1.5 rounded shadow-xs transition flex items-center space-x-1.5"
-                title="Lodge complaints on simulated CPGRAMS & CSS Portals"
+                className="text-xs bg-[#0b3b60] hover:bg-[#072a45] text-white font-bold px-3 py-1.5 rounded shadow-xs transition flex items-center space-x-1.5"
+                title="Lodge complaints on simulated AICTE CSS Portal"
               >
-                <span>🇮🇳 CPGRAMS &amp; CSS Simulator</span>
+                <span>AICTE CSS Simulator</span>
               </button>
             )}
 
@@ -267,19 +267,19 @@ export const RegistrationAndLogin: React.FC<RegistrationAndLoginProps> = ({
       <main className="max-w-4xl w-full mx-auto px-4 py-8 flex-1">
         {/* External Portals Simulator Teaser */}
         {onGoToExternalPortals && (
-          <div className="mb-4 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-300 rounded p-3 text-xs text-orange-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-2xs">
+          <div className="mb-4 bg-gradient-to-r from-blue-50 to-sky-50 border border-blue-300 rounded p-3 text-xs text-slate-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-2xs">
             <div className="flex items-center space-x-2">
               <span className="text-base">🏛️</span>
               <span>
-                <strong>Official External Portals:</strong> Test real-time intake from <strong>CPGRAMS (GoI)</strong> and <strong>AICTE CSS</strong> to see how complaints trigger instant overlap alerts on the AICTE Dashboard.
+                <strong>AICTE Centralized Support System:</strong> Test external intake from the <strong>AICTE CSS Simulator</strong> to see how grievances automatically connect and reflect in the All Complaints section of the AICTE Dashboard.
               </span>
             </div>
             <button
               type="button"
               onClick={onGoToExternalPortals}
-              className="px-3 py-1 bg-[#e26a00] hover:bg-[#c2410c] text-white font-bold rounded text-xs shrink-0 transition"
+              className="px-3 py-1 bg-[#0b3b60] hover:bg-[#072a45] text-white font-bold rounded text-xs shrink-0 transition"
             >
-              Launch CPGRAMS / CSS Simulator &rarr;
+              Open CSS Simulator &rarr;
             </button>
           </div>
         )}

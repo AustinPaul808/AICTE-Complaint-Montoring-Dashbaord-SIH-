@@ -32,26 +32,16 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
 
   // Filters
   const [search, setSearch] = useState('');
-  const [departmentId, setDepartmentId] = useState<string>(
-    isAdmin ? 'ALL' : (profile?.department_id || 'ALL')
-  );
+  const [departmentId, setDepartmentId] = useState<string>('ALL');
+  const [sourceFilter, setSourceFilter] = useState<'ALL' | 'CSS' | 'INTERNAL'>('ALL');
   const [status, setStatus] = useState<ComplaintStatus | 'ALL'>('ALL');
   const [priority, setPriority] = useState<ComplaintPriority | 'ALL'>('ALL');
   const [sortBy, setSortBy] = useState<'recent' | 'due_date' | 'priority'>('recent');
 
-  // Enforce bureau isolation for non-administrators
-  useEffect(() => {
-    if (!isAdmin && profile?.department_id) {
-      setDepartmentId(profile.department_id);
-    }
-  }, [isAdmin, profile?.department_id]);
-
   const fetchComplaints = useCallback(async () => {
     setIsLoading(true);
     try {
-      const effectiveDeptId = isAdmin
-        ? (departmentId !== 'ALL' ? departmentId : undefined)
-        : (profile?.department_id || undefined);
+      const effectiveDeptId = departmentId !== 'ALL' ? departmentId : undefined;
 
       const options: ComplaintFilterOptions = {
         search: search.trim() || undefined,
@@ -62,14 +52,20 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
       };
 
       const result = await getComplaints(options);
-      setComplaints(result.data);
-      setTotalCount(result.count);
+      let list = result.data;
+      if (sourceFilter === 'CSS') {
+        list = list.filter((c) => c.title.includes('[CSS:'));
+      } else if (sourceFilter === 'INTERNAL') {
+        list = list.filter((c) => !c.title.includes('[CSS:'));
+      }
+      setComplaints(list);
+      setTotalCount(sourceFilter === 'ALL' ? result.count : list.length);
     } catch (err) {
       console.error('Error fetching complaints list:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [search, departmentId, status, priority, sortBy, isAdmin, profile?.department_id]);
+  }, [search, departmentId, sourceFilter, status, priority, sortBy]);
 
   useEffect(() => {
     getDepartments().then(setDepartments).catch(console.error);
@@ -80,6 +76,19 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
       fetchComplaints();
     }, 300);
     return () => clearTimeout(timer);
+  }, [fetchComplaints]);
+
+  // Real-time synchronization whenever grievances are submitted in simulator or storage updates
+  useEffect(() => {
+    const handleSync = () => {
+      fetchComplaints();
+    };
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('aicte_complaints_updated', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('aicte_complaints_updated', handleSync);
+    };
   }, [fetchComplaints]);
 
   const getStatusBadge = (s: ComplaintStatus) => {
@@ -159,6 +168,45 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
 
       {/* Filter and Search Bar */}
       <div className="bg-white border border-slate-200 rounded p-4 shadow-sm space-y-3">
+        {/* Source Filter Switcher */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-3 text-xs">
+          <span className="text-slate-500 font-semibold mr-1">Filter Source:</span>
+          <button
+            type="button"
+            onClick={() => setSourceFilter('ALL')}
+            className={`px-3 py-1 rounded font-semibold transition ${
+              sourceFilter === 'ALL'
+                ? 'bg-[#0b3b60] text-white shadow-2xs'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            All Grievances
+          </button>
+          <button
+            type="button"
+            onClick={() => setSourceFilter('CSS')}
+            className={`px-3 py-1 rounded font-semibold transition flex items-center space-x-1.5 ${
+              sourceFilter === 'CSS'
+                ? 'bg-blue-600 text-white shadow-2xs'
+                : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+            <span>CSS Simulator Intake Only</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSourceFilter('INTERNAL')}
+            className={`px-3 py-1 rounded font-semibold transition ${
+              sourceFilter === 'INTERNAL'
+                ? 'bg-slate-800 text-white shadow-2xs'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            Internal AICTE Cases
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           
           {/* Search Box */}
@@ -177,27 +225,25 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
 
           {/* Bureau Filter */}
           <div>
-            {isAdmin ? (
-              <select
-                value={departmentId}
-                onChange={(e) => setDepartmentId(e.target.value)}
-                className="w-full py-2 px-3 text-xs border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-[#0b3b60] bg-white text-slate-900"
-              >
-                <option value="ALL">All Bureaus &amp; Cells</option>
-                {departments.map((d) => (
+            <select
+              value={departmentId}
+              onChange={(e) => setDepartmentId(e.target.value)}
+              className="w-full py-2 px-3 text-xs border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-[#0b3b60] bg-white text-slate-900"
+            >
+              <option value="ALL">All Bureaus &amp; CSS Simulator Intake</option>
+              {profile?.department_id && (
+                <option value={profile.department_id}>
+                  My Bureau ({departmentCode || 'Bureau'})
+                </option>
+              )}
+              {departments
+                .filter((d) => d.id !== profile?.department_id)
+                .map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name} ({d.code})
                   </option>
                 ))}
-              </select>
-            ) : (
-              <div className="w-full py-2 px-3 text-xs border border-slate-200 rounded bg-slate-100 text-slate-700 font-semibold flex items-center justify-between">
-                <span>{departmentCode || 'Bureau'}: {profile?.departments?.name || 'Active Desk'}</span>
-                <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                  Locked
-                </span>
-              </div>
-            )}
+            </select>
           </div>
 
           {/* Status Filter */}
@@ -311,14 +357,9 @@ export const ComplaintList: React.FC<ComplaintListProps> = ({
                       {/* Title & Category */}
                       <td className="py-3 px-4 max-w-[260px]">
                         <div className="font-medium text-slate-900 line-clamp-1 flex items-center">
-                          {c.title.includes('[CPGRAMS:') && (
-                            <span className="mr-1.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-orange-100 text-orange-900 border border-orange-300 uppercase shrink-0">
-                              CPGRAMS
-                            </span>
-                          )}
                           {c.title.includes('[CSS:') && (
-                            <span className="mr-1.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-100 text-blue-900 border border-blue-300 uppercase shrink-0">
-                              AICTE CSS
+                            <span className="mr-1.5 px-2 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-900 border border-blue-300 uppercase shrink-0">
+                              CSS Simulator
                             </span>
                           )}
                           <span className="truncate">{c.title.replace(/^\[(CPGRAMS|CSS):[^\]]+\]\s*/, '')}</span>

@@ -105,18 +105,6 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
 
           {/* Right Controls: Notifications & User Card */}
           <div className="flex items-center space-x-3 sm:space-x-4">
-            
-            {/* CPGRAMS & CSS Portals Button */}
-            {onNavigate && (
-              <button
-                type="button"
-                onClick={() => onNavigate('external-portals')}
-                className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-semibold text-amber-200 border border-white/20 transition"
-                title="Open simulated CPGRAMS & CSS intake portals"
-              >
-                <span>🇮🇳 CPGRAMS &amp; CSS Simulator</span>
-              </button>
-            )}
 
             {/* Notifications Bell */}
             <div className="relative">

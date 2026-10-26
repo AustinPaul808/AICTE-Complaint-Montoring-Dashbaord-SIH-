@@ -10,8 +10,7 @@ import {
   History,
   ShieldAlert,
   Building,
-  CheckCircle2,
-  Globe
+  CheckCircle2
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -40,12 +39,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
       label: 'AI Overlap Engine',
       icon: Sparkles,
       description: 'Cross-bureau conflict discovery',
-    },
-    {
-      id: 'external-portals',
-      label: 'CPGRAMS & CSS Simulator',
-      icon: Globe,
-      description: 'Live GoI & CSS complaint intake',
     },
     {
       id: 'respond',

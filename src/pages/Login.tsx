@@ -113,22 +113,22 @@ export const Login: React.FC<LoginProps> = ({ onGoToPublicPortal, onGoToExternal
           </div>
         )}
 
-        {/* CPGRAMS & CSS External Simulator Banner */}
+        {/* AICTE CSS External Simulator Banner */}
         {onGoToExternalPortals && (
-          <div className="max-w-md w-full mb-4 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-300 rounded-md p-3.5 shadow-2xs flex items-center justify-between">
+          <div className="max-w-md w-full mb-4 bg-gradient-to-r from-blue-50 to-sky-50 border border-blue-300 rounded-md p-3.5 shadow-2xs flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <span className="text-base">🇮🇳</span>
-              <div className="text-xs text-orange-950">
-                <span className="font-bold block">CPGRAMS &amp; CSS Simulator</span>
-                <span className="text-[11px] text-orange-800">Lodge grievances via official external channels</span>
+              <span className="text-base">🏛️</span>
+              <div className="text-xs text-slate-900">
+                <span className="font-bold block text-[#0b3b60]">AICTE CSS Simulator</span>
+                <span className="text-[11px] text-slate-600">Lodge external grievances via Centralized Support System</span>
               </div>
             </div>
             <button
               type="button"
               onClick={onGoToExternalPortals}
-              className="px-3 py-1.5 bg-[#e26a00] hover:bg-[#c2410c] text-white text-xs font-bold rounded shadow-xs shrink-0 transition"
+              className="px-3 py-1.5 bg-[#0b3b60] hover:bg-[#072a45] text-white text-xs font-bold rounded shadow-xs shrink-0 transition"
             >
-              Launch Portals &rarr;
+              Open CSS Simulator &rarr;
             </button>
           </div>
         )}

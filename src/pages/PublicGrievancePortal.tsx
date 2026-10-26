@@ -368,9 +368,9 @@ export const PublicGrievancePortal: React.FC<PublicGrievancePortalProps> = ({
                 type="button"
                 onClick={onGoToExternalPortals}
                 className="text-xs text-amber-200 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 rounded transition flex items-center space-x-1"
-                title="Open simulated CPGRAMS & CSS Portals"
+                title="Open simulated AICTE CSS Portal"
               >
-                <span>🇮🇳 CPGRAMS / CSS Simulator</span>
+                <span>AICTE CSS Simulator</span>
               </button>
             )}
             <button

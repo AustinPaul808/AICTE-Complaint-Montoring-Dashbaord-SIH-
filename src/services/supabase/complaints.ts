@@ -247,6 +247,10 @@ export function saveLocalStoredComplaint(complaint: ComplaintWithRelations): voi
       current.unshift(complaint);
     }
     localStorage.setItem(STORAGE_LOCAL_COMPLAINTS_KEY, JSON.stringify(current));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('aicte_complaints_updated', { detail: complaint }));
+      window.dispatchEvent(new Event('storage'));
+    }
   } catch (err) {
     console.warn('Error saving local complaint:', err);
   }
@@ -322,6 +326,9 @@ export async function getComplaints(options: ComplaintFilterOptions = {}): Promi
     }
     return c;
   });
+
+  // Exclude CPGRAMS grievances (only grievances entered from CSS simulator are shown)
+  allComplaints = allComplaints.filter(c => !c.title.includes('[CPGRAMS:'));
 
   // Apply filters
   if (departmentId && departmentId !== 'ALL') {
@@ -543,9 +550,21 @@ export async function ingestExternalComplaint(params: {
   complainantType: string;
   studentRollNo?: string;
 }): Promise<ComplaintWithRelations> {
-  // PGRC department ID (CPGRAMS and CSS public grievances route to PGRC by default)
-  const pgrcDept = DEFAULT_DEPARTMENTS.find(d => d.code === 'PGRC');
-  const targetDeptId = pgrcDept?.id || 'd0000000-0000-0000-0000-000000000002';
+  // Route to responsible bureau according to grievance category (defaults to PGRC)
+  const CATEGORY_BUREAU_MAP: Record<string, string> = {
+    'Fee Cap Violation': 'PGRC',
+    'Non-Refund of Security Deposit': 'PGRC',
+    'Withholding of Original Certificates': 'PGRC',
+    'Faculty Deficiency & Non-Payment of Remuneration': 'RB',
+    'Unauthorized Course Operation': 'RB',
+    'Ragging & Student Harassment': 'PGRC',
+    'Infrastructure & Lab Non-Compliance': 'AB',
+    'Governance & Administrative Malpractice': 'PAP',
+    'Admission Irregularity': 'RB',
+  };
+  const targetCode = CATEGORY_BUREAU_MAP[params.category] || 'PGRC';
+  const targetDept = DEFAULT_DEPARTMENTS.find(d => d.code === targetCode) || DEFAULT_DEPARTMENTS.find(d => d.code === 'PGRC');
+  const targetDeptId = targetDept?.id || 'd0000000-0000-0000-0000-000000000002';
 
   // Format title with clear external portal tag
   const formattedTitle = `[${params.source}: ${params.externalReferenceId}] ${params.title}`;
@@ -572,7 +591,7 @@ export async function ingestExternalComplaint(params: {
   const fullComplaint: ComplaintWithRelations = {
     ...createdRow,
     institution: DEFAULT_INSTITUTIONS.find(i => i.id === params.institutionId),
-    department: pgrcDept,
+    department: targetDept,
   };
 
   // Add to external stream history
